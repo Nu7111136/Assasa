@@ -6,3 +6,7 @@ instance/
 *.sqlite*
 __pycache__/
 .pytest_cache/
+.neon
+node_modules/
+.env.neon
+*.log
