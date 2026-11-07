@@ -14,7 +14,6 @@ def utc(value):
 def register_billing(app, db, User, Payment, now):
     app.extensions['asasa_payment'] = Payment
     app.config.setdefault('APP_ENV', os.getenv('APP_ENV', 'production'))
-    app.config.setdefault('FAKE_TODAY', os.getenv('FAKE_TODAY', ''))
     app.config.setdefault('PAYMENT_JAZZCASH_NUMBER', os.getenv('PAYMENT_JAZZCASH_NUMBER', '03036666758'))
     app.config.setdefault('TESTER_PHONES', os.getenv('TESTER_PHONES', ''))
     app.config.setdefault('ADMIN_PHONES', os.getenv('ADMIN_PHONES', ''))
@@ -22,34 +21,17 @@ def register_billing(app, db, User, Payment, now):
     @app.before_request
     def entitlement():
         g.user = db.session.get(User, session.get('user_id')) if session.get('user_id') else None
-        g.dev = app.config['APP_ENV'] == 'dev'
         testers = {x.strip() for x in (app.config['TESTER_PHONES'] + ',' + app.config['ADMIN_PHONES']).split(',') if x.strip()}
         g.is_tester = bool(g.user and g.user.phone in testers)
+        # Retire the old picker/dev-clock state, including pre-upgrade sessions.
+        for key in ('simulate_day', 'tester_real'):
+            session.pop(key, None)
         if not g.is_tester:
             session.pop('tester_day', None)
-            session.pop('tester_real', None)
-        g.test_mode = g.is_tester and 'tester_day' in session
-        if not g.dev:
-            session.pop('simulate_day', None)
-        if g.user and g.dev and request.endpoint == 'dashboard' and 'simulate_day' in request.args:
-            v = request.args['simulate_day']
-            if not re.fullmatch(r'[0-7]', v):
-                abort(400)
-            session['simulate_day'] = int(v)
+        g.test_mode = g.is_tester and session.get('tester_day', 0) > 0
         effective = now()
-        if g.user and g.dev:
-            if 'simulate_day' in session:
-                effective = utc(g.user.created_at) + timedelta(days=session['simulate_day'])
-            elif app.config['FAKE_TODAY']:
-                try:
-                    effective = datetime.fromisoformat(app.config['FAKE_TODAY'].replace('Z', '+00:00'))
-                    effective = utc(effective)
-                except ValueError:
-                    abort(400, 'FAKE_TODAY must be an ISO date/time')
-        if g.is_tester and session.get('tester_real'):
-            effective = now()
         if g.test_mode:
-            effective = utc(g.user.created_at) + timedelta(days=session['tester_day'])
+            effective += timedelta(days=session['tester_day'])
         g.effective = effective
         g.is_admin = bool(g.user and g.user.phone in {x.strip() for x in app.config['ADMIN_PHONES'].split(',') if x.strip()})
         g.paid = bool(g.user and g.user.paid_until and utc(g.user.paid_until) > effective)
@@ -68,26 +50,19 @@ def register_billing(app, db, User, Payment, now):
     def billing_context():
         return dict(account=getattr(g,'user',None), readonly=getattr(g,'readonly',False),
                     is_admin=getattr(g,'is_admin',False), paid=getattr(g,'paid',False),
-                    trial_days=getattr(g,'trial_days',0), dev=getattr(g,'dev',False),
+                    trial_days=getattr(g,'trial_days',0),
                     is_tester=getattr(g,'is_tester',False), test_mode=getattr(g,'test_mode',False), tester_day=session.get('tester_day',0),
-                    simulated_day=session.get('simulate_day',0), jazzcash=app.config['PAYMENT_JAZZCASH_NUMBER'])
+                    jazzcash=app.config['PAYMENT_JAZZCASH_NUMBER'])
 
     @app.post('/test-mode')
     def test_mode():
         if not g.is_tester:
             abort(403)
-        choice = request.form.get('day', '')
-        if choice == 'real':
+        action = request.form.get('action', '')
+        if action == 'next':
+            session['tester_day'] = session.get('tester_day', 0) + 1
+        elif action == 'reset':
             session.pop('tester_day', None)
-            session['tester_real'] = True
-            # Real date also resets the older dev picker in this session.
-            session.pop('simulate_day', None)
-        elif choice == 'on':
-            session.pop('tester_real', None)
-            session['tester_day'] = 0
-        elif re.fullmatch(r'[0-7]', choice):
-            session.pop('tester_real', None)
-            session['tester_day'] = int(choice)
         else:
             abort(400)
         return redirect(url_for('dashboard'))

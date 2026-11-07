@@ -123,7 +123,6 @@ Environment settings (private `.env`, not committed/shipped):
 APP_ENV=production
 PAYMENT_JAZZCASH_NUMBER=03036666758
 ADMIN_PHONES=
-FAKE_TODAY=
 ```
 
 Set `ADMIN_PHONES` to a comma-separated allowlist of **existing registered** phone
@@ -141,46 +140,15 @@ remain allowed for an authorized admin even when that admin's own trial expired.
 A paid, unexpired account shows a paid-access banner and is not read-only.
 No inventory screens or real gateway/automatic verification were added.
 
-### Simulate days — DEVELOPMENT ONLY
+### Tester day preview
 
-Set `APP_ENV=dev` in `.env`, restart, sign in, then use the DEV day picker or:
+Set TESTER_PHONES to comma-separated registered phone numbers. ADMIN_PHONES also
+qualify. Restart after changing allowlists. On Dashboard, Next day adds one day
+to actual server time for this session; Reset returns to the real date. A TEST:
+Day N strip shows the current offset. Works in all APP_ENV values; non-testers
+cannot activate it. Logout clears the session. Other sessions are unaffected.
 
-- `/dashboard?simulate_day=0` → 5 days left
-- `/dashboard?simulate_day=1` → 4 days left
-- `/dashboard?simulate_day=2` → 3 days left
-- `/dashboard?simulate_day=3` → 2 days left
-- `/dashboard?simulate_day=4` → 1 day left
-- `/dashboard?simulate_day=5` (also 6, 7) → read-only
-
-The simulated instant is the user's signup time plus N days; the session keeps it
-on Upgrade/admin pages too. It does not rewrite timestamps. Alternatively set
-`FAKE_TODAY=2026-11-13T12:00:00+00:00` (ISO UTC datetime or YYYY-MM-DD). A selected
-session day takes precedence over FAKE_TODAY. Clear cookies/log out to remove it.
-In `APP_ENV=production` (the default), query/session simulation and FAKE_TODAY are
-ignored and the DEV bar is absent. Never enable dev simulation on a public site.
-Admin approval uses actual server time even in dev. Fake clocks apply to viewing
-entitlements only. The app was not deployed and the offline laptop was not touched.
-
-Run `pytest -q` for signup plus trial/billing authorization tests. No real financial
-or customer data is bundled. PostgreSQL needs disposable integration testing before
-production; tests here cover SQLite only.
-
-### Allowlisted tester toggle (no APP_ENV editing needed by testers)
-
-The operator sets `TESTER_PHONES` once in the private environment to a comma-separated
-list of registered phone numbers. `ADMIN_PHONES` users qualify automatically. Restart
-the app after allowlist changes. On Dashboard, qualified users see **Test mode**.
-Turn it on, choose Day 0–7, and Apply. Day 3 previews 2 days remaining; Day 5–7
-preview read-only. A clear TEST MODE strip appears on all logged-in pages while
-active. **Real date** (or Turn off test mode) clears the tester day and uses actual
-server time, overriding FAKE_TODAY for that tester's session. Logging out clears it.
-
-This works in production without changing APP_ENV. The server checks the current
-allowlist on every request and discards unauthorized tester state. The setting is
-only in that browser's signed session, not a user or billing record; other browsers
-and users are unaffected. Simulation changes entitlement display/read-only preview,
-not stored trial dates, payment amounts, approval timestamps or paid_until. Genuine
-payment submissions/admin approvals still perform real operations: do not use those
-buttons as fake payment simulations. Existing dev simulation remains separately
-available; tester mode takes precedence and its picker hides the dev picker.
-CSS version/cache now `trial-3` / `asasa-shell-trial-3`.
+The old day picker, simulate_day query, and FAKE_TODAY clock are retired.
+Preview affects entitlement display/read-only checks only. No stored trial dates
+or billing records change. Payment submissions and approvals remain REAL actions
+using actual server time. CSS/service-worker version: trial-4.

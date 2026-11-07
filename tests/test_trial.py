@@ -3,47 +3,47 @@ from main import db, User, Payment, now
 from test_signup import signup, token
 
 
+def step(client, action='next'):
+    return client.post('/test-mode',data={'action':action,'csrf_token':token(client,'/login')})
+
+
 def test_banner_days(client,app):
-    app.config['APP_ENV']='dev'
+    app.config['TESTER_PHONES']='03001234567'
     signup(client)
     for n in range(8):
-        page=client.get(f'/dashboard?simulate_day={n}')
+        page=client.get('/dashboard')
         assert page.status_code==200
         assert ('Trial ended, pay to continue' if n>=5 else f'{5-n} '+('day left' if n==4 else 'days left')) in page.text
         assert 'Upgrade Now' in page.text
         if n>=5:assert 'Read-only mode' in page.text
+        assert step(client).status_code==302
     assert 'Trial ended' in client.get('/upgrade').text
     client.get('/language/ur')
-    assert 'آزمائش ختم' in client.get('/dashboard').text
+    assert '\u0627\u06af\u0644\u0627 \u062f\u0646' in client.get('/dashboard').text
+    assert step(client,'reset').status_code==302
+    assert 'TEST: Day' not in client.get('/dashboard').text
 
 
-def test_production_ignores_simulation(client,app):
-    app.config.update(APP_ENV='production',FAKE_TODAY='2099-01-01')
+def test_legacy_simulation_ignored(client,app):
+    app.config.update(APP_ENV='dev',FAKE_TODAY='2099-01-01')
     signup(client)
     with client.session_transaction() as s:s['simulate_day']=7
     page=client.get('/dashboard?simulate_day=7')
     assert '5 days left' in page.text
-    assert 'DEV ·' not in page.text
+    assert 'tester-buttons' not in page.text
     with client.session_transaction() as s: assert 'simulate_day' not in s
 
 
-def test_fake_today(client,app):
-    app.config.update(APP_ENV='dev',FAKE_TODAY=(now()+timedelta(days=6)).isoformat())
-    signup(client)
-    assert 'Trial ended' in client.get('/dashboard').text
-    assert client.get('/dashboard?simulate_day=99').status_code==400
-    assert '5 days left' in client.get('/dashboard?simulate_day=0').text
-
-
 def test_readonly_blocks_mutation_but_allows_payment(client,app):
-    app.config['APP_ENV']='dev'
+    app.config['TESTER_PHONES']='03001234567'
     signup(client)
-    client.get('/dashboard?simulate_day=6')
-    # Signup is a mutation; future stock POSTs are denied by the same hook.
+    for _ in range(6):step(client)
     assert signup(client,phone='03111234567').status_code==403
     r=client.post('/upgrade',data={'tid':'TEST-TID-12345','csrf_token':token(client,'/upgrade')})
     assert r.status_code==302
     assert 'pending' in client.get('/upgrade').text
+    assert step(client,'reset').status_code==302
+    assert '5 days left' in client.get('/dashboard').text
 
 
 def test_payment_approval_permissions_and_repeated_review(client,app):
@@ -132,51 +132,57 @@ def test_upgrade_cli_preserves_legacy_users(tmp_path):
         assert Payment.query.count()==0
 
 
-def test_allowlisted_test_mode_in_production(client,app):
+def test_allowlisted_steps_and_billing_unchanged(client,app):
     app.config.update(APP_ENV='production',TESTER_PHONES='03001234567')
     signup(client)
-    assert 'tester-toggle' in client.get('/dashboard').text
-    def choose(day):
-        return client.post('/test-mode',data={'day':day,'csrf_token':token(client,'/login')})
-    assert choose('on').status_code==302
-    assert 'TEST MODE — Day' in client.get('/dashboard').text
-    assert choose('3').status_code==302
-    assert '2 days left' in client.get('/dashboard').text
-    assert 'TEST MODE — Day' in client.get('/upgrade').text
-    assert choose('7').status_code==302
-    assert 'Trial ended' in client.get('/dashboard').text
-    assert choose('real').status_code==302
-    assert '5 days left' in client.get('/dashboard').text
-    assert 'TEST MODE — Day' not in client.get('/dashboard').text
     with app.app_context():
-        assert User.query.one().paid_until is None
+        u=User.query.one(); original=(u.created_at,u.trial_ends_at,u.paid_until)
+    html=client.get('/dashboard').text
+    assert 'Next day' in html and 'Reset' in html
+    assert '<select' not in html and 'Test mode' not in html
+    for n in range(1,9):
+        assert step(client).status_code==302
+        assert f'TEST: Day {n}' in client.get('/dashboard').text
+    assert 'TEST: Day 8' in client.get('/upgrade').text
+    assert step(client,'reset').status_code==302
+    assert '5 days left' in client.get('/dashboard').text
+    assert 'TEST: Day' not in client.get('/dashboard').text
+    with app.app_context():
+        u=User.query.one(); assert original==(u.created_at,u.trial_ends_at,u.paid_until)
         assert Payment.query.count()==0
-    assert choose('99').status_code==400
+    assert step(client,'on').status_code==400
+    assert client.post('/test-mode',data={'action':'next'}).status_code==400
 
 
-def test_non_tester_ignored_and_session_isolation(client,app):
-    app.config.update(APP_ENV='production',TESTER_PHONES='03001234567')
+def test_non_tester_and_session_isolation(client,app):
+    app.config['TESTER_PHONES']='03001234567'
     signup(client)
-    client.post('/test-mode',data={'day':'7','csrf_token':token(client,'/login')})
+    for _ in range(7):step(client)
     other=app.test_client()
     signup(other,phone='03111234567')
     with other.session_transaction() as s:s['tester_day']=7
     html=other.get('/dashboard').text
     assert '5 days left' in html
-    assert 'tester-toggle' not in html and 'TEST MODE' not in html
-    assert other.post('/test-mode',data={'day':'7','csrf_token':token(other,'/login')}).status_code==403
+    assert 'tester-buttons' not in html and 'TEST: Day' not in html
+    assert step(other).status_code==403
     assert 'Trial ended' in client.get('/dashboard').text
-    with app.app_context():
-        assert User.query.count()==2
-        assert Payment.query.count()==0
+    # Same account in a different browser does not inherit simulation.
+    another=app.test_client()
+    with client.session_transaction() as s: uid=s['user_id']
+    with another.session_transaction() as s:s['user_id']=uid
+    assert '5 days left' in another.get('/dashboard').text
     app.config['TESTER_PHONES']=''
     assert '5 days left' in client.get('/dashboard').text
+    with client.session_transaction() as s:assert 'tester_day' not in s
 
 
-def test_admin_qualifies_and_real_date_overrides_fake_today(client,app):
+def test_admin_qualifies_in_dev_and_uses_real_offset(client,app):
     app.config.update(APP_ENV='dev',FAKE_TODAY='2099-01-01',ADMIN_PHONES='03001234567')
     signup(client)
-    assert 'tester-toggle' in client.get('/dashboard').text
-    client.post('/test-mode',data={'day':'real','csrf_token':token(client,'/login')})
-    assert '5 days left' in client.get('/dashboard').text
-    assert client.post('/test-mode',data={'day':'3'}).status_code==400
+    with app.app_context():
+        u=User.query.one();u.created_at=now()-timedelta(days=2);u.trial_ends_at=now()+timedelta(days=3);db.session.commit()
+    assert 'tester-buttons' in client.get('/dashboard').text
+    assert step(client).status_code==302
+    assert '2 days left' in client.get('/dashboard').text
+    assert step(client,'reset').status_code==302
+    assert '3 days left' in client.get('/dashboard').text

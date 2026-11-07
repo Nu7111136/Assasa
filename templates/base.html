@@ -1,8 +1,8 @@
-﻿<!doctype html><html lang="{{ lang }}" dir="{{ 'rtl' if lang == 'ur' else 'ltr' }}"><head>
+<!doctype html><html lang="{{ lang }}" dir="{{ 'rtl' if lang == 'ur' else 'ltr' }}"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0A1F44"><meta name="robots" content="noindex,nofollow">
-<title>Asasa · {{ t[mode] if mode is defined else t.dashboard }}</title><link rel="manifest" href="/static/manifest.webmanifest"><link rel="icon" href="/static/icon-192.png"><link rel="apple-touch-icon" href="/static/icon-192.png"><link rel="stylesheet" href="/static/style.css?v=trial-3?v=2"></head>
+<title>Asasa · {{ t[mode] if mode is defined else t.dashboard }}</title><link rel="manifest" href="/static/manifest.webmanifest"><link rel="icon" href="/static/icon-192.png"><link rel="apple-touch-icon" href="/static/icon-192.png"><link rel="stylesheet" href="/static/style.css?v=trial-4"></head>
 <body><header><a class="brand" href="/">Asasa <span lang="ur">اثاثہ</span></a><nav aria-label="Language"><a href="{{ url_for('switch_language',lang='en',page=request.endpoint) }}" lang="en">EN</a><a href="{{ url_for('switch_language',lang='ur',page=request.endpoint) }}" lang="ur">اردو</a></nav></header>
-<main>{% if account %}{% if test_mode %}<aside class="test-strip">{{ 'TEST MODE — Day' if lang=='en' else 'آزمائشی موڈ — دن' }} {{tester_day}}</aside>{% endif %}
+<main>{% if account %}{% if test_mode %}<aside class="test-strip">{{ 'TEST: Day' if lang=='en' else 'آزمائش: دن' }} {{tester_day}}</aside>{% endif %}
 <aside class="trial-banner" aria-label="{{ 'Subscription' if lang=='en' else 'رکنیت' }}"><span>
 {% if paid %}{{ 'Paid access active' if lang=='en' else 'ادا شدہ رکنیت فعال ہے' }}
 {% elif readonly %}{{ 'Trial ended, pay to continue' if lang=='en' else 'آزمائش ختم، جاری رکھنے کے لیے ادائیگی کریں' }}
@@ -10,6 +10,5 @@
 <a class="upgrade-button" href="{{ url_for('upgrade') }}">{{ 'Upgrade Now' if lang=='en' else 'ابھی اپ گریڈ کریں' }}</a></aside>
 {% if readonly %}<p class="readonly-note">{{ 'Read-only mode: viewing is available; changes are locked.' if lang=='en' else 'صرف دیکھنے کی اجازت ہے۔ تبدیلیاں بند ہیں۔' }}</p>{% endif %}
 {% if is_admin %}<p><a href="{{ url_for('admin_payments') }}">{{ 'Review payments' if lang=='en' else 'ادائیگیوں کا جائزہ' }}</a></p>{% endif %}
-{% if dev and not test_mode %}<form class="dev-bar" action="/dashboard" method="get"><label for="simulation">DEV · {{ 'Simulate day' if lang=='en' else 'آزمائشی دن' }}</label><select id="simulation" name="simulate_day">{% for n in range(8) %}<option value="{{n}}" {% if n==simulated_day %}selected{% endif %}>{{n}}</option>{% endfor %}</select><button>Apply</button></form>{% endif %}
 {% endif %}{% for message in get_flashed_messages() %}<p class="error" role="alert">{{ message }}</p>{% endfor %}{% block content %}{% endblock %}</main>
 <footer>{{ t.install }}</footer><script src="/static/app.js" defer></script></body></html>

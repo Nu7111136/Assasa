@@ -33,3 +33,6 @@ footer{max-width:480px;margin:0 auto;padding:0 24px 24px}
 
 /* Tester tools: scoped only, retaining all of NZ's CSS. */
 .tester-toggle button{margin:0 0 12px}.test-strip{border:2px dashed var(--navy);color:var(--navy);font-weight:800;padding:12px;margin-bottom:12px;border-radius:8px;background:#fff}.tester-picker{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:24px}.tester-picker label{flex-basis:100%;margin:0}.tester-picker select{flex:1;min-height:44px;border:1px solid var(--navy);border-radius:8px;background:#fff;color:#111;padding:8px;font:inherit}.tester-picker button{width:auto;margin:0}
+
+/* Simple tester buttons; original CSS retained. */
+.tester-buttons{display:flex;gap:12px;margin-bottom:20px}.tester-buttons form{flex:1}.tester-buttons button{margin:0;background:var(--navy)}
