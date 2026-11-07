@@ -51,11 +51,17 @@ class Payment(db.Model):
     reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
 
 
-def create_app(config=None):
-    app = Flask(__name__)
-    uri = os.getenv('DATABASE_URL', 'sqlite:///asasa.db')
+def database_uri(value):
+    """Use psycopg v3 for standard Neon/legacy PostgreSQL URLs."""
+    uri = (value or '').strip() or 'sqlite:///asasa.db'
     if uri.startswith(('postgres://', 'postgresql://')):
         uri = 'postgresql+psycopg://' + uri.split('://', 1)[1]
+    return uri
+
+
+def create_app(config=None):
+    app = Flask(__name__)
+    uri = database_uri(os.getenv('DATABASE_URL'))
     app.config.update(SECRET_KEY=os.getenv('SECRET_KEY') or os.urandom(32), SQLALCHEMY_DATABASE_URI=uri,
                       SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
                       SESSION_COOKIE_SECURE=os.getenv('COOKIE_SECURE') == '1', MAX_CONTENT_LENGTH=16384,

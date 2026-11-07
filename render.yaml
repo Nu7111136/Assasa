@@ -1,0 +1,27 @@
+# This file is at the repository root; no rootDir is needed.
+services:
+  - type: web
+    name: asasa-testers
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: flask --app main upgrade-db && gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --threads 4
+    healthCheckPath: /login
+    autoDeployTrigger: 'off'
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: ADMIN_PHONES
+        sync: false
+      - key: TESTER_PHONES
+        sync: false
+      - key: PAYMENT_JAZZCASH_NUMBER
+        value: "03036666758"
+      - key: APP_ENV
+        value: production
+      - key: COOKIE_SECURE
+        value: "1"
+      - key: PYTHON_VERSION
+        value: "3.12.8"

@@ -120,6 +120,7 @@ def register_billing(app, db, User, Payment, now):
         inspector = inspect(db.engine)
         if inspector.has_table('user') and 'paid_until' not in {c['name'] for c in inspector.get_columns('user')}:
             with db.engine.begin() as conn:
-                conn.execute(text('ALTER TABLE "user" ADD COLUMN paid_until TIMESTAMP'))
+                column_type = User.__table__.c.paid_until.type.compile(dialect=db.engine.dialect)
+                conn.execute(text(f'ALTER TABLE "user" ADD COLUMN paid_until {column_type}'))
         db.create_all()
         print('POC billing schema ready. Existing data preserved.')
