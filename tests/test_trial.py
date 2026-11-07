@@ -11,15 +11,15 @@ def test_banner_days(client,app):
     app.config['TESTER_PHONES']='03001234567'
     signup(client)
     for n in range(8):
-        page=client.get('/dashboard')
+        page=client.get('/dashboard',follow_redirects=True)
         assert page.status_code==200
         assert ('Trial ended, pay to continue' if n>=5 else f'{5-n} '+('day left' if n==4 else 'days left')) in page.text
         assert 'Upgrade Now' in page.text
-        if n>=5:assert 'Read-only mode' in page.text
+        if n>=5:assert 'Upgrade your account' in page.text
         assert step(client).status_code==302
     assert 'Trial ended' in client.get('/upgrade').text
     client.get('/language/ur')
-    assert '\u0627\u06af\u0644\u0627 \u062f\u0646' in client.get('/dashboard').text
+    assert '\u0627\u06af\u0644\u0627 \u062f\u0646' in client.get('/dashboard',follow_redirects=True).text
     assert step(client,'reset').status_code==302
     assert 'TEST: Day' not in client.get('/dashboard').text
 
@@ -34,11 +34,12 @@ def test_legacy_simulation_ignored(client,app):
     with client.session_transaction() as s: assert 'simulate_day' not in s
 
 
-def test_readonly_blocks_mutation_but_allows_payment(client,app):
+def test_expiry_redirects_mutation_but_allows_payment(client,app):
     app.config['TESTER_PHONES']='03001234567'
     signup(client)
     for _ in range(6):step(client)
-    assert signup(client,phone='03111234567').status_code==403
+    response=client.post('/',data={'csrf_token':token(client,'/upgrade')})
+    assert response.status_code==303 and response.location.endswith('/upgrade')
     r=client.post('/upgrade',data={'tid':'TEST-TID-12345','csrf_token':token(client,'/upgrade')})
     assert r.status_code==302
     assert 'pending' in client.get('/upgrade').text
@@ -112,7 +113,7 @@ def test_paid_expiry(client,app):
     with app.app_context():
         User.query.one().paid_until=now()-timedelta(seconds=1)
         db.session.commit()
-    assert 'Trial ended, pay to continue' in client.get('/dashboard').text
+    assert 'Trial ended, pay to continue' in client.get('/dashboard',follow_redirects=True).text
 
 
 def test_upgrade_cli_preserves_legacy_users(tmp_path):
@@ -142,7 +143,7 @@ def test_allowlisted_steps_and_billing_unchanged(client,app):
     assert '<select' not in html and 'Test mode' not in html
     for n in range(1,9):
         assert step(client).status_code==302
-        assert f'TEST: Day {n}' in client.get('/dashboard').text
+        assert f'TEST: Day {n}' in client.get('/dashboard',follow_redirects=True).text
     assert 'TEST: Day 8' in client.get('/upgrade').text
     assert step(client,'reset').status_code==302
     assert '5 days left' in client.get('/dashboard').text
@@ -165,7 +166,7 @@ def test_non_tester_and_session_isolation(client,app):
     assert '5 days left' in html
     assert 'tester-buttons' not in html and 'TEST: Day' not in html
     assert step(other).status_code==403
-    assert 'Trial ended' in client.get('/dashboard').text
+    assert 'Trial ended' in client.get('/dashboard',follow_redirects=True).text
     # Same account in a different browser does not inherit simulation.
     another=app.test_client()
     with client.session_transaction() as s: uid=s['user_id']
@@ -186,3 +187,56 @@ def test_admin_qualifies_in_dev_and_uses_real_offset(client,app):
     assert '2 days left' in client.get('/dashboard').text
     assert step(client,'reset').status_code==302
     assert '3 days left' in client.get('/dashboard').text
+
+
+def test_expired_redirects_and_upgrade_controls(client,app):
+    app.config['TESTER_PHONES']='03001234567'
+    signup(client)
+    for n in range(1,7):
+        response=step(client)
+        assert response.location.endswith('/upgrade' if n>=5 else '/dashboard')
+    for path in ('/dashboard','/','/missing','/admin/payments'):
+        response=client.get(path)
+        assert response.status_code==302 and response.location.endswith('/upgrade')
+    upgrade=client.get('/upgrade')
+    assert upgrade.status_code==200
+    assert 'Next day' in upgrade.text and 'Reset' in upgrade.text and 'TEST: Day 6' in upgrade.text
+    assert client.get('/login').status_code==200
+    assert client.get('/static/style.css').status_code==200
+    assert client.get('/sw.js').status_code==200
+    assert client.get('/language/ur?page=upgrade',follow_redirects=True).status_code==200
+    assert step(client,'reset').location.endswith('/dashboard')
+    assert client.get('/dashboard').status_code==200
+    assert client.post('/logout',data={'csrf_token':token(client,'/login')}).location.endswith('/login')
+
+
+def test_real_expiry_admin_access_and_paid_simulation(client,app):
+    signup(client)
+    with app.app_context():
+        User.query.one().trial_ends_at=now()-timedelta(days=1)
+        db.session.commit()
+    assert client.get('/dashboard').location.endswith('/upgrade')
+    app.config['ADMIN_PHONES']='03001234567'
+    assert client.get('/admin/payments').status_code==200
+    assert client.post('/admin/payments/999/approve',data={'csrf_token':token(client,'/upgrade')}).status_code==409
+    # Reset cannot revive a genuinely expired trial.
+    assert step(client,'reset').location.endswith('/upgrade')
+    with app.app_context():
+        User.query.one().paid_until=now()+timedelta(days=1)
+        db.session.commit()
+    for _ in range(7):assert step(client).location.endswith('/dashboard')
+    assert client.get('/dashboard').status_code==200
+    assert 'Paid access active' in client.get('/dashboard').text
+    assert client.get('/admin/payments').status_code==200
+
+
+def test_expired_logout_and_anonymous_access(client,app):
+    assert client.get('/login').status_code==200
+    signup(client)
+    with app.app_context():
+        User.query.one().trial_ends_at=now()-timedelta(seconds=1)
+        db.session.commit()
+    response=client.post('/logout',data={'csrf_token':token(client,'/upgrade')})
+    assert response.location.endswith('/login')
+    assert client.get('/login').status_code==200
+    assert client.get('/dashboard').location.endswith('/login')

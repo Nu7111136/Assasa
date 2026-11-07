@@ -34,17 +34,18 @@ def register_billing(app, db, User, Payment, now):
             effective += timedelta(days=session['tester_day'])
         g.effective = effective
         g.is_admin = bool(g.user and g.user.phone in {x.strip() for x in app.config['ADMIN_PHONES'].split(',') if x.strip()})
-        g.paid = bool(g.user and g.user.paid_until and utc(g.user.paid_until) > effective)
+        g.paid = bool(g.user and g.user.paid_until and utc(g.user.paid_until) > now())
         remaining = (utc(g.user.trial_ends_at) - effective).total_seconds() if g.user else 0
         import math
         g.trial_days = max(0, math.ceil(remaining / 86400))
         g.readonly = bool(g.user and not g.paid and remaining <= 0)
-        # Fail closed for future inventory/profile mutation endpoints too.
-        # Payment submission and logout remain usable after expiry; admin reviews
-        # are administrative operations, not the admin's own stock mutations.
-        allowed = {'upgrade', 'logout', 'login', 'review_payment', 'test_mode'}
-        if g.readonly and request.method not in ('GET', 'HEAD', 'OPTIONS') and request.endpoint not in allowed:
-            abort(403, 'Read-only: upgrade to continue')
+        # Expired accounts are routed to payment, not a read-only dashboard.
+        # Static/PWA assets and language switching must still work on Upgrade.
+        allowed = {'upgrade', 'logout', 'login', 'test_mode', 'static', 'sw', 'switch_language'}
+        if g.is_admin:
+            allowed.update({'admin_payments', 'review_payment'})
+        if g.readonly and request.endpoint not in allowed:
+            return redirect(url_for('upgrade'), code=303 if request.method == 'POST' else 302)
 
     @app.context_processor
     def billing_context():
@@ -65,7 +66,9 @@ def register_billing(app, db, User, Payment, now):
             session.pop('tester_day', None)
         else:
             abort(400)
-        return redirect(url_for('dashboard'))
+        effective = now() + timedelta(days=session.get('tester_day', 0))
+        expired = not g.paid and utc(g.user.trial_ends_at) <= effective
+        return redirect(url_for('upgrade' if expired else 'dashboard'))
 
     @app.route('/upgrade', methods=['GET', 'POST'])
     def upgrade():

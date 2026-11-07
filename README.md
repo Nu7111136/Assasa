@@ -52,7 +52,7 @@ restart. Set one stable private random key on hosting. Never use an example key.
   phone DB constraint and route rate limits. Rate limiting is per-process memory
   for the POC; configure shared Redis for multi-worker production.
 - Trial stored in UTC; dashboard shows PKT and ceiling days left, zero after expiry.
-  Expiry enables a server-side read-only mutation guard. New mutation routes must
+  Expiry enables a server-side redirect to Upgrade. New protected routes must
   be covered by entitlement tests; payment submission and logout stay available. Existing accounts never reset on login.
 - No stored copy is sent to any third party. PWA caches ONLY public static assets;
   private HTML, POSTs, CNIC and dashboard are never cached. Offline page says login
@@ -134,10 +134,10 @@ Duplicate TIDs are rejected across all accounts; reviews are one-shot and atomic
 Rejected TIDs cannot be reused: arrange corrected payment details with the admin.
 The configured destination must be checked/owned by the operator before real use.
 
-After trial expiry, users may still view pages, submit a TID or log out. Other
-logged-in mutation requests are blocked server-side with 403. Admin payment reviews
+After trial expiry, unpaid users are redirected to Upgrade on protected pages
+and mutations. They may still submit a TID, log in/out, or use tester Reset. Admin payment reviews
 remain allowed for an authorized admin even when that admin's own trial expired.
-A paid, unexpired account shows a paid-access banner and is not read-only.
+A paid, unexpired account shows a paid-access banner and is not restricted.
 No inventory screens or real gateway/automatic verification were added.
 
 ### Tester day preview
@@ -149,6 +149,12 @@ Day N strip shows the current offset. Works in all APP_ENV values; non-testers
 cannot activate it. Logout clears the session. Other sessions are unaffected.
 
 The old day picker, simulate_day query, and FAKE_TODAY clock are retired.
-Preview affects entitlement display/read-only checks only. No stored trial dates
+Preview affects entitlement display/access checks only. No stored trial dates
 or billing records change. Payment submissions and approvals remain REAL actions
 using actual server time. CSS/service-worker version: trial-4.
+
+Expired unpaid accounts redirect to /upgrade (including simulated expiry).
+Tester Next day/Reset controls are available on Dashboard and Upgrade. Paid access
+is checked against real time; previews never shorten a paid subscription.
+Upgrade, logout/login, tester actions, and admin payment review for admins remain
+accessible. Static/PWA assets and language switching remain available.

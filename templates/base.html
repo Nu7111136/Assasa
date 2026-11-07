@@ -8,7 +8,7 @@
 {% elif readonly %}{{ 'Trial ended, pay to continue' if lang=='en' else 'آزمائش ختم، جاری رکھنے کے لیے ادائیگی کریں' }}
 {% else %}{{ trial_days }} {{ ('day left' if trial_days==1 else 'days left') if lang=='en' else 'دن باقی' }}{% endif %}</span>
 <a class="upgrade-button" href="{{ url_for('upgrade') }}">{{ 'Upgrade Now' if lang=='en' else 'ابھی اپ گریڈ کریں' }}</a></aside>
-{% if readonly %}<p class="readonly-note">{{ 'Read-only mode: viewing is available; changes are locked.' if lang=='en' else 'صرف دیکھنے کی اجازت ہے۔ تبدیلیاں بند ہیں۔' }}</p>{% endif %}
+
 {% if is_admin %}<p><a href="{{ url_for('admin_payments') }}">{{ 'Review payments' if lang=='en' else 'ادائیگیوں کا جائزہ' }}</a></p>{% endif %}
 {% endif %}{% for message in get_flashed_messages() %}<p class="error" role="alert">{{ message }}</p>{% endfor %}{% block content %}{% endblock %}</main>
 <footer>{{ t.install }}</footer><script src="/static/app.js" defer></script></body></html>

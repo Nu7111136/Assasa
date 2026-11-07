@@ -73,7 +73,9 @@ def test_expired(client, app):
     with app.app_context():
         User.query.one().trial_ends_at = now() - timedelta(seconds=1)
         db.session.commit()
-    assert 'Your trial has ended.' in client.get('/dashboard').text
+    response = client.get('/dashboard')
+    assert response.status_code == 302 and response.location.endswith('/upgrade')
+    assert 'Upgrade your account' in client.get('/dashboard', follow_redirects=True).text
 
 
 def test_csrf(client):

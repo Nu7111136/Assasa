@@ -1,5 +1,3 @@
 {% extends 'base.html' %}{% block content %}
-{% if is_tester %}<div class="tester-buttons">
-{% for action in ('next','reset') %}<form action="/test-mode" method="post"><input type="hidden" name="csrf_token" value="{{csrf_token()}}"><input type="hidden" name="action" value="{{action}}"><button>{{ ('Next day' if action=='next' else 'Reset') if lang=='en' else ('اگلا دن' if action=='next' else 'اصل تاریخ') }}</button></form>{% endfor %}
-</div>{% endif %}
+{% include '_tester_buttons.html' %}
 <h1>{{ t.dashboard }}</h1><p>{{ t.welcome }}, {{ user.name }}.</p><section class="trial"><strong class="count">{{ days }}</strong><h2>{{ t.days }}</h2><p>{{ t.ends }}<br><bdi>{{ end }}</bdi></p>{% if not days %}<p>{{ t.expired }}</p>{% endif %}</section><p>{{ t.price }}</p><form action="/logout" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button>{{ t.logout }}</button></form>{% endblock %}

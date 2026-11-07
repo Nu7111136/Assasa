@@ -1,4 +1,5 @@
 {% extends 'base.html' %}{% block content %}
+{% include '_tester_buttons.html' %}
 <h1>{{ 'Upgrade your account' if lang=='en' else 'اپنا اکاؤنٹ اپ گریڈ کریں' }}</h1>
 <p class="payment-amount">{{ 'Rs 299 for 30 days' if lang=='en' else '30 دن کے لیے 299 روپے' }}</p>
 <ol class="payment-steps">
