@@ -1,0 +1,4 @@
+{% extends 'base.html' %}{% block content %}<h1>{{'Pending payments' if lang=='en' else 'زیرِ جائزہ ادائیگیاں'}}</h1>
+<p>{{'Verify credited funds in JazzCash before approving. A TID alone is not proof of payment.' if lang=='en' else 'منظوری سے پہلے JazzCash میں موصول شدہ رقم دیکھیں۔ صرف آئی ڈی ادائیگی کا ثبوت نہیں۔'}}</p>
+{% for p,u in rows %}<article class="payment-card"><h2>{{u.name}}</h2><p><bdi>{{u.phone}}</bdi></p><p>TID: <bdi>{{p.tid}}</bdi> · Rs {{p.amount}}</p>
+{% for action in ('approve','reject') %}<form method="post" action="{{url_for('review_payment',pid=p.id,action=action)}}"><input type="hidden" name="csrf_token" value="{{csrf_token()}}"><button>{{ {'approve':'منظور کریں','reject':'مسترد کریں'}[action] if lang=='ur' else action|title }}</button></form>{% endfor %}</article>{% else %}<p>{{'No pending payments.' if lang=='en' else 'کوئی زیرِ جائزہ ادائیگی نہیں۔'}}</p>{% endfor %}{% endblock %}

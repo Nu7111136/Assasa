@@ -1,0 +1,14 @@
+{% extends 'base.html' %}{% block content %}
+<h1>{{ t[mode] }}</h1><p>{{ t.trial }}</p><p class="price">{{ t.price }}</p>
+<form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% if mode == 'signup' %}
+<label for="name">{{ t.name }}</label><input id="name" name="name" autocomplete="name" maxlength="120" required>
+<label for="address">{{ t.address }}</label><textarea id="address" name="address" autocomplete="street-address" maxlength="500" rows="2" required></textarea>
+<label for="cnic">{{ t.cnic }}</label><input id="cnic" name="cnic" inputmode="numeric" dir="ltr" placeholder="12345-1234567-1" pattern="(?:[0-9]{13}|[0-9]{5}-[0-9]{7}-[0-9])" maxlength="15" required>
+{% endif %}
+<label for="phone">{{ t.phone }}</label><input id="phone" name="phone" type="tel" inputmode="tel" dir="ltr" autocomplete="tel" placeholder="03XXXXXXXXX" pattern="03[0-9]{9}" maxlength="11" required>
+{% if mode == 'signup' %}<label for="email">{{ t.email }}</label><input id="email" name="email" type="email" dir="ltr" autocomplete="email" maxlength="254">{% endif %}
+<label for="password">{{ t.password }}</label><input id="password" name="password" type="password" minlength="8" maxlength="128" autocomplete="{{ 'new-password' if mode == 'signup' else 'current-password' }}" required>
+<button>{{ t.submit if mode == 'signup' else t.login }}</button></form>
+<p class="switch">{{ t.have if mode == 'signup' else t.new }} <a href="{{ url_for('login' if mode == 'signup' else 'signup') }}">{{ t.login if mode == 'signup' else t.signup }}</a></p><p class="notice">{{ t.privacy }}</p>
+{% endblock %}

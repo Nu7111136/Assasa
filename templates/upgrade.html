@@ -1,0 +1,10 @@
+{% extends 'base.html' %}{% block content %}
+<h1>{{ 'Upgrade your account' if lang=='en' else 'اپنا اکاؤنٹ اپ گریڈ کریں' }}</h1>
+<p class="payment-amount">{{ 'Rs 299 for 30 days' if lang=='en' else '30 دن کے لیے 299 روپے' }}</p>
+<ol class="payment-steps">
+{% if lang=='en' %}<li>Open your JazzCash app or visit a JazzCash agent.</li><li>Send Rs 299 to this JazzCash number: <strong><bdi>{{jazzcash}}</bdi></strong>.</li><li>Check the recipient details before confirming. Keep your receipt and transaction ID (TID).</li><li>Enter the TID below. The admin will check the actual payment and approve or reject it. Access is not activated until approval.</li>
+{% else %}<li>JazzCash ایپ کھولیں یا JazzCash ایجنٹ کے پاس جائیں۔</li><li>اس نمبر پر 299 روپے بھیجیں: <strong><bdi>{{jazzcash}}</bdi></strong>۔</li><li>تصدیق سے پہلے وصول کنندہ کی معلومات دیکھیں۔ رسید اور ٹرانزیکشن آئی ڈی محفوظ رکھیں۔</li><li>نیچے ٹرانزیکشن آئی ڈی درج کریں۔ منتظم ادائیگی کی جانچ کے بعد منظور یا مسترد کرے گا۔ منظوری تک رکنیت فعال نہیں ہوگی۔</li>{% endif %}</ol>
+<p class="notice">{{ 'Never enter a JazzCash PIN or OTP here. Do not pay again while your payment is pending.' if lang=='en' else 'یہاں JazzCash پن یا او ٹی پی ہرگز درج نہ کریں۔ زیرِ جائزہ ادائیگی دوبارہ نہ کریں۔' }}</p>
+<form method="post"><input type="hidden" name="csrf_token" value="{{csrf_token()}}"><label for="tid">{{ 'JazzCash transaction ID (TID)' if lang=='en' else 'JazzCash ٹرانزیکشن آئی ڈی (TID)' }}</label><input id="tid" name="tid" minlength="5" maxlength="64" pattern="[A-Za-z0-9-]{5,64}" dir="ltr" required autocomplete="off"><button>{{ 'Submit for review' if lang=='en' else 'جائزے کے لیے جمع کریں' }}</button></form>
+{% for p in payments %}<p class="payment-status"><bdi>{{p.tid}}</bdi> · {{ {'pending':'زیرِ جائزہ','approved':'منظور','rejected':'مسترد'}[p.status] if lang=='ur' else p.status }}</p>{% endfor %}
+<p><a href="/dashboard">{{t.dashboard}}</a></p>{% endblock %}
