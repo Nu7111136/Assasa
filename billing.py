@@ -1,9 +1,10 @@
 """Manual JazzCash verification and trial entitlements. No payment API claims."""
 import os
 import re
+import secrets
 from datetime import datetime, timedelta, timezone
 from flask import g, session, request, redirect, url_for, render_template, flash, abort
-from sqlalchemy import inspect, text
+from sqlalchemy import func, inspect, text
 from sqlalchemy.exc import IntegrityError
 
 
@@ -41,7 +42,7 @@ def register_billing(app, db, User, Payment, now):
         g.readonly = bool(g.user and not g.paid and remaining <= 0)
         # Expired accounts are routed to payment, not a read-only dashboard.
         # Static/PWA assets and language switching must still work on Upgrade.
-        allowed = {'upgrade', 'logout', 'login', 'forgot_password', 'test_mode', 'static', 'sw', 'switch_language'}
+        allowed = {'upgrade', 'logout', 'login', 'forgot_password', 'test_mode', 'simulate_payment', 'static', 'sw', 'switch_language'}
         if g.is_admin:
             allowed.update({'admin_payments', 'review_payment'})
         if g.readonly and request.endpoint not in allowed:
@@ -90,12 +91,29 @@ def register_billing(app, db, User, Payment, now):
         payments = Payment.query.filter_by(user_id=g.user.id).order_by(Payment.id.desc()).all()
         return render_template('upgrade.html', payments=payments)
 
+    @app.post('/upgrade/simulate')
+    def simulate_payment():
+        if not g.user:
+            return redirect(url_for('login'))
+        if not g.is_tester:
+            abort(403)
+        tid = f"TEST-SIM-{g.user.id}-{now().strftime('%Y%m%d%H%M%S')}-{secrets.token_hex(3).upper()}"
+        payment = Payment(user_id=g.user.id, tid=tid, created_at=now(), amount=299,
+                          status='approved', reviewed_at=now(), reviewed_by=g.user.id)
+        db.session.add(payment)
+        g.user.paid_until = now() + timedelta(days=30)
+        db.session.commit()
+        flash('ٹیسٹ ادائیگی ہو گئی۔ 30 دن کھل گئے، ٹیسٹ والیٹ میں 299 روپے شامل ہیں۔' if g.lang == 'ur'
+              else 'Test payment recorded. 30 days are active and Rs 299 was added to the test wallet.', 'ok')
+        return redirect(url_for('dashboard'))
+
     @app.get('/admin/payments')
     def admin_payments():
         if not g.user: return redirect(url_for('login'))
         if not g.is_admin: abort(403)
         rows = db.session.query(Payment, User).join(User, Payment.user_id == User.id).filter(Payment.status=='pending').order_by(Payment.id).all()
-        return render_template('payments.html', rows=rows)
+        wallet = db.session.scalar(db.select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.status == 'approved')) or 0
+        return render_template('payments.html', rows=rows, wallet=wallet)
 
     @app.post('/admin/payments/<int:pid>/<action>')
     def review_payment(pid, action):

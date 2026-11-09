@@ -1,6 +1,6 @@
 // Only public static assets are cached. Never cache forms, sessions, CNIC or dashboard.
-const CACHE = 'asasa-shell-ui-8';
-const ASSETS = ['/static/style.css?v=ui-8','/static/app.js?v=ui-8','/static/icon-192.png','/static/icon-512.png','/static/offline.html'];
+const CACHE = 'asasa-shell-ui-9';
+const ASSETS = ['/static/style.css?v=ui-9','/static/app.js?v=ui-9','/static/icon-192.png','/static/icon-512.png','/static/offline.html'];
 self.addEventListener('install', event => { event.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS))); self.skipWaiting(); });
 self.addEventListener('activate', event => { event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('asasa-shell-') && k !== CACHE).map(k => caches.delete(k))))); self.clients.claim(); });
 self.addEventListener('fetch', event => {

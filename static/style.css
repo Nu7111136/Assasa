@@ -77,6 +77,12 @@ footer{max-width:480px;margin:0 auto;padding:0 24px 28px}
 .pay-label{margin:0 0 6px;font-size:13px;color:#d7e4ff}
 .pay-number strong{display:block;font-size:28px;letter-spacing:.04em;color:#fff}
 .pay-number .copy-btn{width:auto;margin:12px auto 0;padding:10px 16px;background:#fff;color:var(--navy);box-shadow:none}
+.missing-number{margin:8px 12px 0;color:#ffe08a;font-weight:700}
+.sim-pay{margin:18px 0;padding:16px;border-radius:18px;border:1px dashed var(--gold);background:linear-gradient(180deg,#fff8e6,#fff);box-shadow:0 10px 24px rgba(10,31,68,.08)}
+.sim-pay h2{margin:0 0 6px;font-size:18px}
+.sim-pay button{margin-top:10px}
+.wallet{padding:14px;border-radius:16px;background:linear-gradient(180deg,#142c7a,#0b1a4d);color:var(--gold);font-size:18px;box-shadow:0 12px 28px rgba(11,26,77,.28)}
+.wallet strong{color:#fff}
 .payment-steps{list-style:none;padding:0;margin:0;counter-reset:step}
 .payment-steps li{counter-increment:step;position:relative;margin:12px 0;padding:14px;padding-inline-start:52px;background:#fff;border-radius:16px;box-shadow:0 10px 24px rgba(10,31,68,.08);border:1px solid var(--line)}
 .payment-steps li::before{content:counter(step);position:absolute;inset-inline-start:14px;top:14px;width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;font-weight:800;font-size:14px;display:flex;align-items:center;justify-content:center}

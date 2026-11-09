@@ -93,6 +93,23 @@ def test_other_users_payments_private(client,app):
     assert client.get('/admin/payments').status_code==403
 
 
+def test_simulate_payment_fills_test_wallet(client,app):
+    signup(client)
+    assert client.post('/upgrade/simulate', data={'csrf_token': token(client, '/upgrade')}).status_code == 403
+    app.config['TESTER_PHONES'] = '03001234567'
+    app.config['ADMIN_PHONES'] = '03001234567'
+    for _ in range(6):
+        step(client)
+    ok = client.post('/upgrade/simulate', data={'csrf_token': token(client, '/upgrade')})
+    assert ok.status_code == 302 and ok.location.endswith('/dashboard')
+    assert 'Paid access active' in client.get('/dashboard').text
+    admin = client.get('/admin/payments')
+    assert 'Rs 299' in admin.text
+    with app.app_context():
+        p = Payment.query.one()
+        assert p.status == 'approved' and p.amount == 299 and p.tid.startswith('TEST-SIM-')
+
+
 def test_css_preserved():
     from pathlib import Path
     p=Path(__file__).resolve().parents[1]

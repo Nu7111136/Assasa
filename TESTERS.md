@@ -17,11 +17,12 @@
    remain on Upgrade: tap **Reset** to return to real time. If the real trial has
    already expired, Reset still leaves you on Upgrade; tell NZ. Simulation is only
    for this browser session and does not affect other testers or real billing.
-6. On Upgrade, submit a clearly fake TID, e.g. `TEST-YOURINITIALS-001` (make it unique;
-   5-64 letters/digits/hyphens). Check that it shows pending; do not submit again.
-   **Do NOT transfer money. Never share a JazzCash PIN, OTP, or receipt with private
-   details.** A fake TID does not activate paid access. Ask NZ before testing admin
-   approval: it changes the test account and Reset does not undo paid access.
+6. On Upgrade, allowlisted testers can tap **Pay Rs 299 (test)**. That is a virtual
+   payment: 30 days open and Rs 299 is added to NZ’s **test wallet** on Review
+   payments. No real JazzCash. To practise the live form, submit a unique fake TID
+   such as `TEST-YOURINITIALS-001` (5-64 letters/digits/hyphens) and leave it pending.
+   **Do NOT transfer money. Never share a JazzCash PIN, OTP, or receipt.** Ask NZ
+   before approving a live-looking TID: approval grants 30 days and Reset does not undo it.
 7. Log out and log back in. On login, **Forgot password?** needs the signup phone
    plus the same CNIC; then set a new password. Report issues to NZ: phone/browser model, EN/Urdu,
    steps, expected vs actual result, and a screenshot without phone/CNIC/password/TID.
@@ -44,11 +45,10 @@
    وہاں بھی بٹن ہوں گے؛ **اصل تاریخ (Reset)** سے حقیقی تاریخ واپس آتی ہے۔ اگر اصل
    آزمائشی مدت بھی ختم ہو چکی ہو تو Upgrade ہی کھلے گا؛ NZ کو بتائیں۔ یہ تبدیلی
    صرف اسی براؤزر کے سیشن کے لیے ہے، دوسرے ٹیسٹر یا اصل بلنگ نہیں بدلتے۔
-6. Upgrade پر واضح فرضی اور منفرد TID مثلاً `TEST-AB-001` جمع کریں (5 سے 64 انگریزی
-   حروف، ہندسے یا ہائفن)۔ pending دیکھیں؛ دوبارہ جمع نہ کریں۔ **اصل رقم نہ بھیجیں۔
-   JazzCash PIN، OTP یا ذاتی معلومات والی رسید کبھی شیئر نہ کریں۔** فرضی TID سے
-   رکنیت فعال نہیں ہوتی۔ ایڈمن منظوری ٹیسٹ کرنے سے پہلے NZ سے پوچھیں؛ منظوری اصل
-   ٹیسٹ اکاؤنٹ بدلتی ہے اور Reset سے ختم نہیں ہوتی۔
+6. Upgrade پر ٹیسٹر **299 روپے ادا کریں (ٹیسٹ)** دبا سکتے ہیں۔ یہ مجازی ادائیگی ہے:
+   30 دن کھل جاتے ہیں اور NZ کے ٹیسٹ والیٹ میں 299 روپے لگتے ہیں۔ اصل JazzCash نہیں۔
+   لائیو فارم کی مشق کے لیے منفرد فرضی TID مثلاً `TEST-AB-001` جمع کریں۔ **اصل رقم
+   نہ بھیجیں۔ JazzCash PIN یا OTP نہ دیں۔** حقیقی نما TID منظور کرنے سے پہلے NZ سے پوچھیں۔
 7. لاگ آؤٹ اور دوبارہ لاگ اِن بھی آزمائیں۔ پاس ورڈ بھول جائیں تو لاگ ان پر **پاس ورڈ
    بھول گئے؟** دبائیں؛ رجسٹریشن والا فون اور وہی شناختی نمبر درکار ہے۔ مسئلہ NZ کو بتائیں: فون اور براؤزر، زبان،
    کیے گئے مراحل، متوقع اور اصل نتیجہ۔ تصویر میں فون، شناختی نمبر، پاس ورڈ یا TID
