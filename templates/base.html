@@ -1,14 +1,18 @@
 <!doctype html><html lang="{{ lang }}" dir="{{ 'rtl' if lang == 'ur' else 'ltr' }}"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0A1F44"><meta name="robots" content="noindex,nofollow">
-<title>Asasa · {{ t[mode] if mode is defined else t.dashboard }}</title><link rel="manifest" href="/static/manifest.webmanifest"><link rel="icon" href="/static/icon-192.png"><link rel="apple-touch-icon" href="/static/icon-192.png"><link rel="stylesheet" href="/static/style.css?v=trial-4"></head>
-<body><header><a class="brand" href="/">Asasa <span lang="ur">اثاثہ</span></a><nav aria-label="Language"><a href="{{ url_for('switch_language',lang='en',page=request.endpoint) }}" lang="en">EN</a><a href="{{ url_for('switch_language',lang='ur',page=request.endpoint) }}" lang="ur">اردو</a></nav></header>
-<main>{% if account %}{% if test_mode %}<aside class="test-strip">{{ 'TEST: Day' if lang=='en' else 'آزمائش: دن' }} {{tester_day}}</aside>{% endif %}
+<title>Asasa · {{ t[mode] if mode is defined else t.dashboard }}</title><link rel="manifest" href="/static/manifest.webmanifest"><link rel="icon" href="/static/icon-192.png"><link rel="apple-touch-icon" href="/static/icon-192.png"><link rel="stylesheet" href="/static/style.css?v=ui-8"></head>
+<body><header>
+<div class="header-start">{% if back_href %}<a class="back" id="back-btn" href="{{ back_href }}">{{ t.back }}</a>{% endif %}
+<a class="brand" href="/">Asasa <span lang="ur">اثاثہ</span></a></div>
+<nav aria-label="Language"><a href="{{ url_for('switch_language',lang='en',page=request.endpoint) }}" lang="en">EN</a><a href="{{ url_for('switch_language',lang='ur',page=request.endpoint) }}" lang="ur">اردو</a></nav>
+</header>
+<main class="sheet">{% if account %}{% if test_mode %}<aside class="test-strip">{{ 'TEST: Day' if lang=='en' else 'آزمائش: دن' }} {{tester_day}}</aside>{% endif %}
 <aside class="trial-banner" aria-label="{{ 'Subscription' if lang=='en' else 'رکنیت' }}"><span>
 {% if paid %}{{ 'Paid access active' if lang=='en' else 'ادا شدہ رکنیت فعال ہے' }}
 {% elif readonly %}{{ 'Trial ended, pay to continue' if lang=='en' else 'آزمائش ختم، جاری رکھنے کے لیے ادائیگی کریں' }}
 {% else %}{{ trial_days }} {{ ('day left' if trial_days==1 else 'days left') if lang=='en' else 'دن باقی' }}{% endif %}</span>
 <a class="upgrade-button" href="{{ url_for('upgrade') }}">{{ 'Upgrade Now' if lang=='en' else 'ابھی اپ گریڈ کریں' }}</a></aside>
 
-{% if is_admin %}<p><a href="{{ url_for('admin_payments') }}">{{ 'Review payments' if lang=='en' else 'ادائیگیوں کا جائزہ' }}</a></p>{% endif %}
-{% endif %}{% for message in get_flashed_messages() %}<p class="error" role="alert">{{ message }}</p>{% endfor %}{% block content %}{% endblock %}</main>
-<footer>{{ t.install }}</footer><script src="/static/app.js" defer></script></body></html>
+{% if is_admin %}<p class="admin-link"><a href="{{ url_for('admin_payments') }}">{{ 'Review payments' if lang=='en' else 'ادائیگیوں کا جائزہ' }}</a></p>{% endif %}
+{% endif %}{% for category, message in get_flashed_messages(with_categories=True) %}<p class="flash {{ 'ok' if category=='ok' else 'error' }}" role="alert">{{ message }}</p>{% endfor %}{% block content %}{% endblock %}</main>
+<footer>{{ t.install }}</footer><script src="/static/app.js?v=ui-8" defer></script></body></html>

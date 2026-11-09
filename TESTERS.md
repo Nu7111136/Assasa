@@ -22,7 +22,8 @@
    **Do NOT transfer money. Never share a JazzCash PIN, OTP, or receipt with private
    details.** A fake TID does not activate paid access. Ask NZ before testing admin
    approval: it changes the test account and Reset does not undo paid access.
-7. Log out and log back in. Report issues to NZ: phone/browser model, EN/Urdu,
+7. Log out and log back in. On login, **Forgot password?** needs the signup phone
+   plus the same CNIC; then set a new password. Report issues to NZ: phone/browser model, EN/Urdu,
    steps, expected vs actual result, and a screenshot without phone/CNIC/password/TID.
 
 
@@ -48,6 +49,7 @@
    JazzCash PIN، OTP یا ذاتی معلومات والی رسید کبھی شیئر نہ کریں۔** فرضی TID سے
    رکنیت فعال نہیں ہوتی۔ ایڈمن منظوری ٹیسٹ کرنے سے پہلے NZ سے پوچھیں؛ منظوری اصل
    ٹیسٹ اکاؤنٹ بدلتی ہے اور Reset سے ختم نہیں ہوتی۔
-7. لاگ آؤٹ اور دوبارہ لاگ اِن بھی آزمائیں۔ مسئلہ NZ کو بتائیں: فون اور براؤزر، زبان،
+7. لاگ آؤٹ اور دوبارہ لاگ اِن بھی آزمائیں۔ پاس ورڈ بھول جائیں تو لاگ ان پر **پاس ورڈ
+   بھول گئے؟** دبائیں؛ رجسٹریشن والا فون اور وہی شناختی نمبر درکار ہے۔ مسئلہ NZ کو بتائیں: فون اور براؤزر، زبان،
    کیے گئے مراحل، متوقع اور اصل نتیجہ۔ تصویر میں فون، شناختی نمبر، پاس ورڈ یا TID
    نہ دکھائیں۔

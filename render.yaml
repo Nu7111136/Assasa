@@ -18,7 +18,7 @@ services:
       - key: TESTER_PHONES
         sync: false
       - key: PAYMENT_JAZZCASH_NUMBER
-        value: "03036666758"
+        sync: false
       - key: APP_ENV
         value: production
       - key: COOKIE_SECURE

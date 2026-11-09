@@ -14,7 +14,7 @@ def utc(value):
 def register_billing(app, db, User, Payment, now):
     app.extensions['asasa_payment'] = Payment
     app.config.setdefault('APP_ENV', os.getenv('APP_ENV', 'production'))
-    app.config.setdefault('PAYMENT_JAZZCASH_NUMBER', os.getenv('PAYMENT_JAZZCASH_NUMBER', '03036666758'))
+    app.config.setdefault('PAYMENT_JAZZCASH_NUMBER', os.getenv('PAYMENT_JAZZCASH_NUMBER', '').strip())
     app.config.setdefault('TESTER_PHONES', os.getenv('TESTER_PHONES', ''))
     app.config.setdefault('ADMIN_PHONES', os.getenv('ADMIN_PHONES', ''))
 
@@ -41,7 +41,7 @@ def register_billing(app, db, User, Payment, now):
         g.readonly = bool(g.user and not g.paid and remaining <= 0)
         # Expired accounts are routed to payment, not a read-only dashboard.
         # Static/PWA assets and language switching must still work on Upgrade.
-        allowed = {'upgrade', 'logout', 'login', 'test_mode', 'static', 'sw', 'switch_language'}
+        allowed = {'upgrade', 'logout', 'login', 'forgot_password', 'test_mode', 'static', 'sw', 'switch_language'}
         if g.is_admin:
             allowed.update({'admin_payments', 'review_payment'})
         if g.readonly and request.endpoint not in allowed:

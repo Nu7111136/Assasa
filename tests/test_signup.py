@@ -82,12 +82,73 @@ def test_csrf(client):
     assert client.post('/', data={'name':'Demo'}).status_code == 400
 
 
+def test_forgot_password_resets_with_phone_and_cnic(client, app):
+    signup(client)
+    client.post('/logout', data={'csrf_token': token(client, '/login')})
+    page = client.get('/forgot-password')
+    assert page.status_code == 200
+    assert 'Forgot password' in client.get('/login').text
+    csrf = token(client, '/forgot-password')
+    assert client.post('/forgot-password', data=dict(
+        phone='03001234567', cnic='12345-1234567-1', password='new-secret-99',
+        confirm='mismatch-secret', csrf_token=csrf)).status_code == 400
+    assert client.post('/forgot-password', data=dict(
+        phone='03001234567', cnic='99999-9999999-9', password='new-secret-99',
+        confirm='new-secret-99', csrf_token=csrf)).status_code == 401
+    assert client.post('/forgot-password', data=dict(
+        phone='03999999999', cnic='12345-1234567-1', password='new-secret-99',
+        confirm='new-secret-99', csrf_token=csrf)).status_code == 401
+    ok = client.post('/forgot-password', data=dict(
+        phone='03001234567', cnic='1234512345671', password='new-secret-99',
+        confirm='new-secret-99', csrf_token=csrf))
+    assert ok.status_code == 302 and ok.location.endswith('/login')
+    assert 'Password updated' in client.get('/login').text
+    assert client.post('/login', data=dict(
+        phone='03001234567', password='test-password-123',
+        csrf_token=token(client, '/login'))).status_code == 401
+    assert client.post('/login', data=dict(
+        phone='03001234567', password='new-secret-99',
+        csrf_token=token(client, '/login'))).status_code == 302
+
+
+def test_forgot_password_works_when_trial_expired(client, app):
+    signup(client)
+    with app.app_context():
+        User.query.one().trial_ends_at = now() - timedelta(seconds=1)
+        db.session.commit()
+    assert client.get('/dashboard').location.endswith('/upgrade')
+    reset = client.post('/forgot-password', data=dict(
+        phone='03001234567', cnic='12345-1234567-1', password='after-expiry-1',
+        confirm='after-expiry-1', csrf_token=token(client, '/forgot-password')))
+    assert reset.status_code == 302 and reset.location.endswith('/login')
+
+
 def test_urdu_and_session(client):
     r = client.get('/language/ur', follow_redirects=True)
     assert 'lang="ur" dir="rtl"' in r.text
     assert 'شناختی کارڈ' in r.text
     assert 'dir="ltr"' in r.text
     assert 'lang="ur"' in client.get('/login').text
+
+
+def test_back_button_and_field_help(client):
+    home = client.get('/').text
+    login = client.get('/login').text
+    forgot = client.get('/forgot-password').text
+    assert 'id="back-btn"' not in home
+    assert 'id="back-btn"' in login and 'Back' in login
+    assert 'id="back-btn"' in forgot
+    assert 'Start with 03' in login
+    assert 'Dashes appear automatically' in forgot
+    assert 'data-toggle="password"' in login
+    ur = client.get('/language/ur?page=login', follow_redirects=True).text
+    assert 'واپس' in ur
+    assert 'Show' in login
+    client.get('/language/en?page=login')
+    signup(client)
+    upgrade = client.get('/upgrade').text
+    assert 'Copy number' in upgrade
+    assert 'id="back-btn"' in upgrade
 
 
 def test_pwa_and_privacy(client):

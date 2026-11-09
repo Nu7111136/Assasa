@@ -19,9 +19,10 @@
    phone number; for `TESTER_PHONES`, enter comma-separated testers' own numbers,
    in `03XXXXXXXXX` format. Use your intended numbers, not documentation examples.
    If a list is not needed, leave it empty. Render generates `SECRET_KEY`; retain
-   it across deploys so sessions stay valid. The Blueprint sets
-   `PAYMENT_JAZZCASH_NUMBER=03036666758`, `APP_ENV=production`, and `COOKIE_SECURE=1`.
-   Never put real phone lists in `render.yaml`. Later allowlist changes belong in
+   it across deploys so sessions stay valid. Paste the JazzCash Business receive
+   number into `PAYMENT_JAZZCASH_NUMBER` (Render env only, never Git). The Blueprint
+   sets `APP_ENV=production` and `COOKIE_SECURE=1`. Never put real phone lists or
+   the receive number in `render.yaml`. Later allowlist or wallet changes belong in
    Render > service > Environment, followed by a restart/redeploy.
 5. **Deploy.** Apply the Blueprint and wait for the green deployment. Build installs
    requirements. Start runs `flask --app main upgrade-db` before Gunicorn; this

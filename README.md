@@ -2,7 +2,8 @@
 
 Small Flask + SQLAlchemy server-rendered PWA, not a production identity platform.
 The latest signup brief supersedes the plan's earlier OTP-only onboarding: name,
-address, CNIC, phone, optional email and password; phone/password login. Every new
+address, CNIC, phone, optional email and password; phone/password login. Forgot
+password uses that same phone plus CNIC (no email or SMS). Every new
 account gets one server-recorded 120-hour trial. Price copy: Rs 299/month after
 five days, no automatic charge. Manual payment review is included; real gateway billing, inventory, OTP and
 tenant memberships remain outside this signup POC.
@@ -121,7 +122,7 @@ Environment settings (private `.env`, not committed/shipped):
 
 ```ini
 APP_ENV=production
-PAYMENT_JAZZCASH_NUMBER=03036666758
+PAYMENT_JAZZCASH_NUMBER=
 ADMIN_PHONES=
 ```
 
