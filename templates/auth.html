@@ -2,23 +2,30 @@
 <h1 class="hero-title">{{ t.forgot_title if mode == 'forgot' else t[mode] }}</h1>
 {% if mode == 'forgot' %}<p class="lead">{{ t.forgot_help }}</p>
 {% else %}<p class="lead lead-offer">{{ t.trial }}</p>{% set p = t.price %}{% set key = 'Rs 299' if 'Rs 299' in p else ('299 روپے' if '299 روپے' in p else '') %}<p class="price price-offer">{% if key %}{% set parts = p.split(key, 1) %}{{ parts[0] }}<strong class="price-num">{{ key }}</strong>{{ parts[1] }}{% else %}{{ p }}{% endif %}</p>{% endif %}
+{% if mode != 'forgot' %}
 <form method="post" class="stack{% if mode == 'login' %} compact{% endif %}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 {% if mode == 'signup' %}
 <div class="field"><label for="name">{{ t.name }}</label><input id="name" name="name" autocomplete="name" maxlength="120" required enterkeyhint="next"{% if lang=='ur' %} lang="ur" dir="rtl" inputmode="none" data-kb="ur"{% else %} lang="en" dir="ltr" autocapitalize="words"{% endif %}><p class="hint">{{ t.hint_name }}</p></div>
-<div class="field"><label for="address">{{ t.address }}</label><textarea id="address" name="address" autocomplete="street-address" maxlength="500" rows="2" required enterkeyhint="next"{% if lang=='ur' %} lang="ur" dir="rtl" inputmode="none" data-kb="ur"{% else %} lang="en" dir="ltr"{% endif %}></textarea><p class="hint">{{ t.hint_address }}</p></div>
-{% endif %}
-{% if mode in ('signup', 'forgot') %}
-<div class="field"><label for="cnic">{{ t.cnic }}</label><input id="cnic" name="cnic" lang="en" inputmode="numeric" dir="ltr" placeholder="12345-1234567-1" pattern="(?:[0-9]{13}|[0-9]{5}-[0-9]{7}-[0-9])" maxlength="15" required enterkeyhint="next" spellcheck="false"><p class="hint">{{ t.hint_cnic }}</p></div>
 {% endif %}
 <div class="field"><label for="phone">{{ t.phone }}</label><input id="phone" name="phone" type="tel" lang="en" inputmode="tel" dir="ltr" autocomplete="tel" placeholder="03XXXXXXXXX" pattern="03[0-9]{9}" maxlength="11" required enterkeyhint="next" spellcheck="false"><p class="hint">{{ t.hint_phone }}</p></div>
-{% if mode == 'signup' %}<div class="field"><label for="email">{{ t.email }}</label><input id="email" name="email" type="email" lang="en" dir="ltr" autocomplete="email" maxlength="254" enterkeyhint="next" spellcheck="false"><p class="hint">{{ t.hint_email }}</p></div>{% endif %}
 <div class="field"><label for="password">{{ t.password }}</label>
 <div class="with-action"><input id="password" name="password" class="mpin" type="password" lang="en" dir="ltr" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="{{ 'current-password' if mode == 'login' else 'new-password' }}" required enterkeyhint="{{ 'go' if mode == 'login' else 'next' }}" spellcheck="false" autocapitalize="off" placeholder="••••••"><button type="button" class="text-toggle" data-toggle="password" data-show="{{ t.show_pass }}" data-hide="{{ t.hide_pass }}">{{ t.show_pass }}</button></div>
 <p class="hint">{{ t.hint_password }}</p></div>
-{% if mode in ('signup', 'forgot') %}
-<div class="field"><label for="confirm">{{ t.confirm }}</label><input id="confirm" name="confirm" class="mpin" type="password" lang="en" dir="ltr" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="new-password" required enterkeyhint="done" spellcheck="false" autocapitalize="off" placeholder="••••••"><p class="hint">{{ t.hint_confirm }}</p></div>
+{% if mode == 'signup' %}
+<div class="field"><label for="confirm">{{ t.confirm }}</label><input id="confirm" name="confirm" class="mpin" type="password" lang="en" dir="ltr" inputmode="numeric" pattern="[0-9]{6}" minlength="6" maxlength="6" autocomplete="new-password" required enterkeyhint="next" spellcheck="false" autocapitalize="off" placeholder="••••••"><p class="hint">{{ t.hint_confirm }}</p></div>
+<div class="field biz-field"><p class="biz-label" id="trade-label">{{ inv.pick }}</p><p class="hint">{{ inv.pick_help }}</p>
+<div class="biz-grid" role="group" aria-labelledby="trade-label">
+{% for key in trades %}
+<label class="biz-card">
+<input type="checkbox" name="trade" value="{{ key }}">
+<img src="/static/trades/{{ key }}.jpg" alt="" width="160" height="107">
+<span>{{ inv[key] }}</span>
+</label>
+{% endfor %}
+</div></div>
 {% endif %}
-<button{% if mode in ('login', 'signup') %} class="btn-login"{% endif %}>{{ t.forgot_submit if mode == 'forgot' else (t.submit if mode == 'signup' else t.login) }}</button></form>
+<button{% if mode in ('login', 'signup') %} class="btn-login"{% endif %}>{{ t.submit if mode == 'signup' else t.login }}</button></form>
+{% endif %}
 {% if mode == 'login' %}<p class="switch"><a href="{{ url_for('forgot_password') }}">{{ t.forgot }}</a></p>{% endif %}
 {% if mode == 'forgot' %}<p class="switch"><a href="{{ url_for('login') }}">{{ t.login }}</a></p>
 {% else %}<p class="switch">{{ t.have if mode == 'signup' else t.new }} <a href="{{ url_for('login' if mode == 'signup' else 'signup') }}">{{ t.login if mode == 'signup' else t.signup }}</a></p>{% endif %}

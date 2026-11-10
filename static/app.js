@@ -1,9 +1,15 @@
-const cnic = document.getElementById('cnic');
-if (cnic) cnic.addEventListener('input', () => {
-  const digits = cnic.value.replace(/\D/g, '').slice(0,13);
-  cnic.value = digits.slice(0,5) + (digits.length > 5 ? '-' + digits.slice(5,12) : '') + (digits.length > 12 ? '-' + digits.slice(12) : '');
-  mark(cnic);
-});
+(function oneTrade() {
+  const boxes = document.querySelectorAll('input[name="trade"][type="checkbox"]');
+  if (!boxes.length) return;
+  boxes.forEach((box) => {
+    box.addEventListener('change', () => {
+      if (!box.checked) return;
+      boxes.forEach((other) => {
+        if (other !== box) other.checked = false;
+      });
+    });
+  });
+})();
 
 const phone = document.getElementById('phone');
 if (phone) phone.addEventListener('input', () => {
@@ -61,8 +67,6 @@ document.querySelectorAll('form.row-save').forEach((form) => {
 (function stockGrid() {
   const table = document.querySelector('.stock-table');
   if (!table) return;
-  const menu = document.getElementById('type-menu');
-  let menuRow = null;
 
   function post(url, data) {
     const body = new FormData();
@@ -86,7 +90,7 @@ document.querySelectorAll('form.row-save').forEach((form) => {
   function fields(tr) {
     const csrf = tr.querySelector('[name="csrf_token"]');
     const name = tr.querySelector('.cell-name');
-    const unit = tr.querySelector('input[name="unit"]');
+    const unit = tr.querySelector('[name="unit"]');
     const price = tr.querySelector('.cell-price');
     return {
       csrf_token: csrf ? csrf.value : '',
@@ -105,9 +109,7 @@ document.querySelectorAll('form.row-save').forEach((form) => {
     if (qty) qty.textContent = data.qty;
     const minus = tr.querySelector('.step-btn.minus');
     if (minus) minus.disabled = data.status === 'out';
-    const typeBtn = tr.querySelector('.cell-type');
-    if (typeBtn && data.unit_label) typeBtn.textContent = data.unit_label;
-    const unit = tr.querySelector('input[name="unit"]');
+    const unit = tr.querySelector('[name="unit"]');
     if (unit && data.unit) unit.value = data.unit;
     const price = tr.querySelector('.cell-price');
     if (price && data.price != null) price.value = data.price;
@@ -144,80 +146,19 @@ document.querySelectorAll('form.row-save').forEach((form) => {
       el.value = el.value.replace(/\D/g, '').slice(0, 7);
     });
   });
-
-  function closeMenu() {
-    if (!menu) return;
-    menu.hidden = true;
-    menuRow = null;
-    document.body.classList.remove('menu-open');
-    table.querySelectorAll('.cell-type[aria-expanded="true"]').forEach((btn) => {
-      btn.setAttribute('aria-expanded', 'false');
-    });
-  }
-
-  function placeMenu(btn) {
-    const box = btn.getBoundingClientRect();
-    const width = Math.max(box.width, 148);
-    menu.style.width = width + 'px';
-    let left = box.left;
-    if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
-    if (left < 8) left = 8;
-    menu.style.left = left + 'px';
-    const gap = 6;
-    if (window.innerHeight - box.bottom < 220) {
-      menu.style.top = 'auto';
-      menu.style.bottom = (window.innerHeight - box.top + gap) + 'px';
-    } else {
-      menu.style.bottom = 'auto';
-      menu.style.top = (box.bottom + gap) + 'px';
-    }
-  }
-
-  table.querySelectorAll('.cell-type').forEach((btn) => {
-    btn.addEventListener('click', (event) => {
-      event.preventDefault();
-      event.stopPropagation();
-      const tr = btn.closest('tr');
-      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
-      if (menuRow === tr) {
-        closeMenu();
-        return;
-      }
-      closeMenu();
-      menuRow = tr;
-      btn.setAttribute('aria-expanded', 'true');
-      const current = tr.querySelector('input[name="unit"]');
-      const unit = current ? current.value : '';
-      menu.querySelectorAll('.type-opt').forEach((opt) => {
-        const on = opt.getAttribute('data-unit') === unit;
-        opt.classList.toggle('is-on', on);
-        opt.setAttribute('aria-selected', on ? 'true' : 'false');
-      });
-      menu.hidden = false;
-      document.body.classList.add('menu-open');
-      placeMenu(btn);
+  table.querySelectorAll('.cell-unit').forEach((sel) => {
+    sel.addEventListener('change', () => {
+      const tr = sel.closest('tr');
+      const form = tr && tr.querySelector('form.row-save');
+      if (!form) return;
+      post(form.getAttribute('action'), fields(tr)).then((res) => paint(tr, res));
     });
   });
+})();
 
-  if (menu) {
-    menu.addEventListener('click', (event) => {
-      const pick = event.target.closest('[data-unit]');
-      if (!pick || !menuRow) return;
-      const hidden = menuRow.querySelector('input[name="unit"]');
-      const typeBtn = menuRow.querySelector('.cell-type');
-      const form = menuRow.querySelector('form.row-save');
-      hidden.value = pick.getAttribute('data-unit');
-      typeBtn.textContent = pick.textContent.trim();
-      post(form.getAttribute('action'), fields(menuRow)).then((res) => paint(menuRow, res));
-      closeMenu();
-    });
-  }
-
-  document.addEventListener('pointerdown', (event) => {
-    if (!menu || menu.hidden) return;
-    if (menu.contains(event.target)) return;
-    if (event.target.closest && event.target.closest('.cell-type')) return;
-    closeMenu();
+(function toastOk() {
+  document.querySelectorAll('.flash.ok').forEach((el) => {
+    window.setTimeout(() => el.classList.add('is-gone'), 5600);
   });
 })();
 

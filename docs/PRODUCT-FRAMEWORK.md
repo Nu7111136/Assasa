@@ -45,16 +45,13 @@ Payments board:
 
 Built for people who count stock in a notebook.
 
-Shop picks a **trade** at first inventory use (can change later):
+Shop picks a **trade** at signup (pictured rows with a square checkbox, including Other). First inventory is seeded with 4 template items at qty 10.
 
-- Food
-- Clothes
-- Plumber
-- Carpenter
-- Small shop / kiryana
-- Tailor
+- Food, Clothes, Plumber, Carpenter, Small shop / kiryana, Tailor, Stitching, Hardware shop, Sports, Books, Other
 
-Each item: name, optional simple category, quantity, unit (piece, kg, meter, …), optional buy/sell price. Add, count, low-stock hint. No barcode, no scanner.
+The Rs 299 plan includes **3 inventories** (Workshop / Shop plus Site A and Site B). A 4th asks the shop to pay.
+
+Grid columns: Product, Unit, Price, Qty. Native unit dropdown. No barcode, no scanner.
 
 Available during **trial and paid**. This is why they stay.
 

@@ -376,10 +376,18 @@ def register_billing(app, db, User, Payment, now, ReconNote=None):
                 if 'trade' not in cols:
                     column_type = User.__table__.c.trade.type.compile(dialect=db.engine.dialect)
                     conn.execute(text(f'ALTER TABLE "user" ADD COLUMN trade {column_type}'))
+        if inspector.has_table('item'):
+            item_cols = {c['name'] for c in inspector.get_columns('item')}
+            if 'notebook_id' not in item_cols:
+                with db.engine.begin() as conn:
+                    conn.execute(text('ALTER TABLE item ADD COLUMN notebook_id INTEGER'))
         db.create_all()
         for user in User.query.filter(User.paid_until.isnot(None), User.billing_day.is_(None)):
             local = pkt(user.paid_until)
             if local:
                 user.billing_day = local.day
         db.session.commit()
+        import main as asasa_main
+        from inventory import upgrade_notebook_schema
+        upgrade_notebook_schema(db, User, asasa_main.Item, asasa_main.Notebook, now)
         print('POC billing schema ready. Existing data preserved.')

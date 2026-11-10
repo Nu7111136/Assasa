@@ -2,8 +2,8 @@
 
 Small Flask + SQLAlchemy server-rendered PWA, not a production identity platform.
 The latest signup brief supersedes the plan's earlier OTP-only onboarding: name,
-address, CNIC, phone, optional email and a 6-digit MPIN; phone + MPIN login. Forgot
-MPIN uses that same phone plus CNIC (no email or SMS). Every new
+phone, 6-digit MPIN, and business type. Forgot MPIN is handled by Asasa office.
+Every new
 account gets one server-recorded 120-hour trial. Price copy: Rs 299/month after
 five days, no automatic charge. Manual payment review is included; real gateway billing, inventory, OTP and
 tenant memberships remain outside this signup POC.
@@ -31,7 +31,7 @@ stdout: the terminal locally, and Render → service → Logs in hosting.
 Open http://127.0.0.1:5088. A phone needs the computer's LAN address; PWA service
 workers/installability require HTTPS or localhost. On real phones use a private
 HTTPS deployment. Android: Chrome menu → Install app; iPhone: Safari Share → Add
-to Home Screen. Urdu uses RTL with LTR phone/CNIC inputs. Native Urdu review is
+to Home Screen. Urdu uses RTL with LTR phone inputs. Native Urdu review is
 needed before release. This is a web app installed from a browser, not a Play or
 App Store native build.
 
@@ -44,7 +44,7 @@ restart. Set one stable private random key on hosting. Never use an example key.
 ## Integrate
 
 - `main.py`: app factory, model, validation, login and trial calculation.
-- `/stock`: shop notebook inventory (trial + paid). Trade picker, item cards, came-in / sold-or-used, running-low, most-used. No barcode or SKU.
+- `/stock`: shop notebook inventory (trial + paid). Business chosen at signup with pictured blocks. Template items, up to 3 inventories on the 299 plan, native unit dropdown. No barcode or SKU.
 - `templates/`: bilingual signup/login/dashboard/stock; `TEXT` catalogs are in main.py.
 - `static/`: isolated navy/white UI, icons, manifest and service worker.
 - Import `create_app`, or register equivalent routes/models in your larger app.
@@ -92,8 +92,8 @@ https://render.com/docs/free and https://neon.com/faqs/free-plan-limits-and-quot
 
 ## Before real users (important)
 
-Use **fictional CNIC/phone/address only** for this demo. CNIC/phone are structurally
-validated but NOT verified. CNIC and address are currently ordinary DB columns,
+Use a **fictional phone** for this demo. Phone is structurally
+validated but NOT verified. Unused CNIC and address columns remain on the user table,
 not application-encrypted; require legal purpose/consent, retention/deletion policy,
 encryption/key management, least privilege, auditing and breach procedures before
 collecting real identity data. Do not log request bodies or customer records.

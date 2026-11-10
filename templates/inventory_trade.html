@@ -1,11 +1,18 @@
 {% extends 'base.html' %}{% block content %}
 <p class="stock-kicker">{{ inv.notebook }}</p>
-<h1 class="hero-title">{{ inv.pick }}</h1>
+<h1 class="hero-title" id="trade-label">{{ inv.pick }}</h1>
 <p class="lead">{{ inv.pick_help }}</p>
-<form method="post" action="{{ url_for('inventory_trade') }}" class="trade-grid">
+<form method="post" action="{{ url_for('inventory_trade') }}" class="stack">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="biz-grid" role="group" aria-labelledby="trade-label">
 {% for key in trades %}
-<button type="submit" name="trade" value="{{ key }}" class="trade-card">{{ inv[key] }}</button>
+<label class="biz-card">
+<input type="checkbox" name="trade" value="{{ key }}">
+<img src="/static/trades/{{ key }}.jpg" alt="" width="160" height="107">
+<span>{{ inv[key] }}</span>
+</label>
 {% endfor %}
+</div>
+<button class="btn-login">{{ inv.open }}</button>
 </form>
 {% endblock %}

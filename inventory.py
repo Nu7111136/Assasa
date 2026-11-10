@@ -3,16 +3,68 @@ from decimal import Decimal, InvalidOperation
 import re
 
 from flask import abort, flash, g, jsonify, redirect, render_template, request, url_for
-from sqlalchemy import func
+from sqlalchemy import func, inspect, text
 
 log = None
 
-TRADES = ('kiryana', 'food', 'clothes', 'tailor', 'plumber', 'carpenter')
+TRADES = (
+    'kiryana', 'food', 'clothes', 'tailor', 'stitching', 'plumber',
+    'carpenter', 'hardware', 'sports', 'books', 'other')
 UNITS = ('piece', 'box', 'kg', 'litre', 'packet', 'meter')
 WHOLE_UNITS = frozenset({'piece', 'box', 'packet'})
-DEFAULT_UNIT = dict(kiryana='kg', food='kg', clothes='piece', tailor='meter', plumber='piece', carpenter='piece')
+DEFAULT_UNIT = dict(
+    kiryana='kg', food='kg', clothes='piece', tailor='meter', stitching='piece',
+    plumber='piece', carpenter='piece', hardware='piece', sports='piece',
+    books='piece', other='piece')
 MAX_ITEMS = 300
+MAX_NOTEBOOKS = 3
 KINDS = frozenset({'in', 'out', 'open', 'set'})
+TRADE_MARK = dict(
+    kiryana='🛒', food='🍽', clothes='👗', tailor='🧵', stitching='🪡',
+    plumber='🪠', carpenter='🪚', hardware='🔧', sports='🏏', books='📚',
+    other='📦')
+NB_FIRST = {
+    'en': dict(
+        plumber='Workshop', carpenter='Workshop', hardware='Shop',
+        kiryana='Shop', clothes='Shop', tailor='Shop', stitching='Shop',
+        food='Kitchen', sports='Shop', books='Shop', other='Stock'),
+    'ur': dict(
+        plumber='ورکشاپ', carpenter='ورکشاپ', hardware='دکان',
+        kiryana='دکان', clothes='دکان', tailor='دکان', stitching='دکان',
+        food='باورچی خانہ', sports='دکان', books='دکان', other='مال'),
+}
+NB_EXTRA = {
+    'en': ('Site A', 'Site B'),
+    'ur': ('سائٹ اے', 'سائٹ بی'),
+}
+TEMPLATES = {
+    'en': dict(
+        kiryana=('Sugar', 'Flour', 'Rice', 'Oil'),
+        food=('Chicken', 'Rice', 'Onion', 'Tomato'),
+        clothes=('Shirt', 'Trouser', 'Dupatta', 'Shawl'),
+        tailor=('Cotton', 'Lawn', 'Silk', 'Linen'),
+        plumber=('PVC pipe', 'Thread tape', 'Elbow', 'Tap'),
+        carpenter=('Plywood sheet', 'Screw', 'Hinge', 'Nail'),
+        stitching=('Thread', 'Needle', 'Button', 'Zip'),
+        hardware=('Screw', 'Paint', 'Brush', 'Lock'),
+        sports=('Football', 'Bat', 'Gloves', 'Shoes'),
+        books=('Notebook', 'Pen', 'Textbook', 'Bag'),
+        other=('Notebook', 'Pen', 'Tape', 'Box'),
+    ),
+    'ur': dict(
+        kiryana=('چینی', 'آٹا', 'چاول', 'تیل'),
+        food=('چکن', 'چاول', 'پیاز', 'ٹماٹر'),
+        clothes=('قمیض', 'پاجامہ', 'دوپٹہ', 'شال'),
+        tailor=('سوتی کپڑا', 'لان', 'ریشم', 'لینن'),
+        plumber=('پی وی سی پائپ', 'ٹیپ', 'ایلبو', 'نل'),
+        carpenter=('پلائی ووڈ', 'پیچ', 'کنڈا', 'کیل'),
+        stitching=('دھاگا', 'سوئی', 'بٹن', 'زپ'),
+        hardware=('پیچ', 'پینٹ', 'برش', 'تالہ'),
+        sports=('فٹبال', 'بیٹ', 'دستانے', 'جوتے'),
+        books=('کاپی', 'قلم', 'کتاب', 'بیگ'),
+        other=('کاپی', 'قلم', 'ٹیپ', 'ڈبہ'),
+    ),
+}
 
 INV = {
     'en': dict(
@@ -20,11 +72,15 @@ INV = {
         pick='What do you sell?',
         pick_help='Tap the closest one. You can change this later.',
         kiryana='Small shop / kiryana', food='Food', clothes='Clothes',
-        tailor='Tailor', plumber='Plumber', carpenter='Carpenter',
+        tailor='Tailor', stitching='Stitching', plumber='Plumber', carpenter='Carpenter',
+        hardware='Hardware shop', sports='Sports', books='Books', other='Other',
         open='Open my stock',
         open_help='Add what you keep in the shop. Tap when stock comes in or goes out.',
         add='Add item', add_more='Add more', name='Item name', new_row='New item',
-        col_item='Item', col_type='Type', col_qty='Qty', col_price='Price',
+        col_item='Product', col_unit='Unit', col_type='Unit', col_qty='Qty', col_price='Price',
+        toast_seed='We put a few items in your inventory. Add and subtract them yourself.',
+        nb_new='New', nb_limit='This plan includes 3 inventories. Pay to add another.',
+        site_mark='📍',
         total_items='Total items', need_stock='Need stock', value='Stock value',
         search_ph='Search item', home='Home', tab_stock='Stock',
         stock_in_btn='Stock in', stock_out_btn='Stock out',
@@ -67,11 +123,15 @@ INV = {
         pick='آپ کیا بیچتے ہیں؟',
         pick_help='قریب ترین آپشن دبائیں۔ بعد میں بدل سکتے ہیں۔',
         kiryana='کریانہ / چھوٹی دکان', food='کھانا', clothes='کپڑے',
-        tailor='درزی', plumber='پلمبر', carpenter='بڑھئی',
+        tailor='درزی', stitching='سلائی', plumber='پلمبر', carpenter='بڑھئی',
+        hardware='ہارڈویئر', sports='کھیل', books='کتابیں', other='دیگر',
         open='میرا مال کھولیں',
         open_help='دکان کا سامان لکھیں۔ مال آئے یا جائے تو دبائیں۔',
         add='آئٹم شامل کریں', add_more='اور شامل کریں', name='آئٹم کا نام', new_row='نیا آئٹم',
-        col_item='آئٹم', col_type='قسم', col_qty='تعداد', col_price='قیمت',
+        col_item='آئٹم', col_unit='اکائی', col_type='اکائی', col_qty='تعداد', col_price='قیمت',
+        toast_seed='کچھ آئٹم ہم نے انوینٹری میں ڈال دیے ہیں۔ خود سے جمع تفریق کریں۔',
+        nb_new='نیا', nb_limit='اس پلان میں 3 انوینٹری ہیں۔ ایک اور کے لیے ادائیگی کریں۔',
+        site_mark='📍',
         total_items='کل آئٹم', need_stock='مال چاہیے', value='مال کی قیمت',
         search_ph='آئٹم تلاش کریں', home='گھر', tab_stock='مال',
         stock_in_btn='مال آیا', stock_out_btn='مال گیا',
@@ -161,7 +221,85 @@ def stock_status(item):
     return 'ok'
 
 
-def register_inventory(app, db, User, Item, StockMove, now):
+def first_notebook_name(trade, lang):
+    names = NB_FIRST.get(lang) or NB_FIRST['en']
+    return names.get(trade) or names['other']
+
+
+def extra_notebook_name(index, lang):
+    names = NB_EXTRA.get(lang) or NB_EXTRA['en']
+    if index < 0:
+        index = 0
+    if index >= len(names):
+        return names[-1]
+    return names[index]
+
+
+def seed_first_notebook(db, Notebook, Item, StockMove, now, user, lang):
+    """Create the first notebook. Seed 4 template items at qty 10 when the book is empty."""
+    if not user or not user.trade:
+        return False
+    existing = Notebook.query.filter_by(user_id=user.id, active=True).order_by(Notebook.id).first()
+    if existing:
+        return False
+    lang = lang if lang in TEMPLATES else 'en'
+    at = now()
+    nb = Notebook(user_id=user.id, name=first_notebook_name(user.trade, lang), created_at=at, active=True)
+    db.session.add(nb)
+    db.session.flush()
+    orphans = Item.query.filter_by(user_id=user.id).filter(Item.notebook_id.is_(None)).all()
+    if orphans:
+        for item in orphans:
+            item.notebook_id = nb.id
+        db.session.commit()
+        return False
+    unit = DEFAULT_UNIT.get(user.trade, 'piece')
+    names = TEMPLATES[lang].get(user.trade) or TEMPLATES[lang]['other']
+    for name in names:
+        item = Item(
+            user_id=user.id, notebook_id=nb.id, name=name, category=None,
+            qty=Decimal('10'), unit=unit, min_qty=Decimal('2'),
+            active=True, created_at=at)
+        db.session.add(item)
+        db.session.flush()
+        db.session.add(StockMove(
+            user_id=user.id, item_id=item.id, kind='open', qty=Decimal('10'),
+            qty_before=Decimal('0'), qty_after=Decimal('10'), created_at=at))
+    db.session.commit()
+    flash(INV[lang]['toast_seed'], 'ok')
+    return True
+
+
+def upgrade_notebook_schema(db, User, Item, Notebook, now_fn):
+    inspector = inspect(db.engine)
+    if inspector.has_table('item'):
+        cols = {c['name'] for c in inspector.get_columns('item')}
+        if 'notebook_id' not in cols:
+            with db.engine.begin() as conn:
+                conn.execute(text('ALTER TABLE item ADD COLUMN notebook_id INTEGER'))
+    db.create_all()
+    for user in User.query.all():
+        books = Notebook.query.filter_by(user_id=user.id, active=True).order_by(Notebook.id).all()
+        items = Item.query.filter_by(user_id=user.id).all()
+        if books:
+            first = books[0]
+            for item in items:
+                if not item.notebook_id:
+                    item.notebook_id = first.id
+            continue
+        if not items and not user.trade:
+            continue
+        nb = Notebook(
+            user_id=user.id, name=first_notebook_name(user.trade or 'other', 'en'),
+            created_at=now_fn(), active=True)
+        db.session.add(nb)
+        db.session.flush()
+        for item in items:
+            item.notebook_id = nb.id
+    db.session.commit()
+
+
+def register_inventory(app, db, User, Item, StockMove, Notebook, now):
     global log
     import logging
     log = logging.getLogger('asasa')
@@ -178,6 +316,22 @@ def register_inventory(app, db, User, Item, StockMove, now):
         if not user or not item or item.user_id != user.id or not item.active:
             abort(404)
         return item
+
+    def notebooks_of(user):
+        return Notebook.query.filter_by(user_id=user.id, active=True).order_by(Notebook.id).all()
+
+    def current_notebook(user):
+        books = notebooks_of(user)
+        if not books:
+            return None, books
+        want = request.args.get('nb', type=int)
+        if want is None:
+            raw = request.form.get('nb')
+            want = int(raw) if raw and str(raw).isdigit() else None
+        for nb in books:
+            if nb.id == want:
+                return nb, books
+        return books[0], books
 
     def decorate(item, used_map=None):
         copy = inv()
@@ -248,17 +402,21 @@ def register_inventory(app, db, User, Item, StockMove, now):
         copy = inv()
         if not user.trade:
             return render_template('inventory_trade.html', heading=copy['pick'])
+        seed_first_notebook(db, Notebook, Item, StockMove, now, user, getattr(g, 'lang', 'en'))
+        notebook, books = current_notebook(user)
+        if not notebook:
+            return render_template('inventory_trade.html', heading=copy['pick'])
         view = (request.args.get('view') or 'all').lower()
         if view not in ('all', 'low', 'used'):
             view = 'all'
         find = (request.args.get('q') or '').strip()[:40]
         find_safe = re.sub(r'[%_\\]', '', find)
-        q = Item.query.filter_by(user_id=user.id, active=True)
+        q = Item.query.filter_by(user_id=user.id, notebook_id=notebook.id, active=True)
         if find_safe:
             q = q.filter(Item.name.ilike(f'%{find_safe}%'))
         used_map = used_totals(user.id)
         all_items = [decorate(row, used_map) for row in q.order_by(Item.id).all()]
-        live = Item.query.filter_by(user_id=user.id, active=True).all()
+        live = Item.query.filter_by(user_id=user.id, notebook_id=notebook.id, active=True).all()
         low_n = sum(1 for row in live if stock_status(row) in ('low', 'out'))
         item_n = len(live)
         value_rs = 0
@@ -282,25 +440,50 @@ def register_inventory(app, db, User, Item, StockMove, now):
             else:
                 empty = copy['none']
         focus_id = request.args.get('focus', type=int)
+        first_id = books[0].id if books else None
         return render_template(
             'inventory.html', heading=copy['title'], items=items, view=view, find=find,
             empty=empty, low_n=low_n, item_n=item_n, value_rs=value_rs,
             trade=user.trade, default_unit=DEFAULT_UNIT.get(user.trade, 'piece'), shop=user,
-            focus_id=focus_id)
+            focus_id=focus_id, notebook=notebook, notebooks=books,
+            trade_mark=TRADE_MARK.get(user.trade, '📦'), first_nb_id=first_id,
+            nb_room=len(books) < MAX_NOTEBOOKS)
 
     @app.post('/stock/trade')
     def inventory_trade():
         user = shop()
         if not user:
             return redirect(url_for('login'))
-        trade = (request.form.get('trade') or '').strip()
+        trade = (request.form.getlist('trade')[0] if request.form.getlist('trade') else request.form.get('trade') or '').strip()
         if trade not in TRADES:
             flash(inv()['invalid'])
             return redirect(url_for('inventory'))
         user.trade = trade
         db.session.commit()
+        seed_first_notebook(db, Notebook, Item, StockMove, now, user, getattr(g, 'lang', 'en'))
         log.info('stock trade user=%s trade=%s', user.id, trade)
         return redirect(url_for('inventory'))
+
+    @app.post('/stock/notebooks/new')
+    def notebook_new():
+        user = shop()
+        if not user:
+            return redirect(url_for('login'))
+        if not user.trade:
+            return redirect(url_for('inventory'))
+        copy = inv()
+        books = notebooks_of(user)
+        if len(books) >= MAX_NOTEBOOKS:
+            flash(copy['nb_limit'])
+            return redirect(url_for('upgrade'))
+        lang = getattr(g, 'lang', 'en')
+        nb = Notebook(
+            user_id=user.id, name=extra_notebook_name(len(books) - 1, lang),
+            created_at=now(), active=True)
+        db.session.add(nb)
+        db.session.commit()
+        log.info('stock notebook user=%s nb=%s', user.id, nb.id)
+        return redirect(url_for('inventory', nb=nb.id))
 
     @app.route('/stock/new', methods=['GET', 'POST'])
     def inventory_new():
@@ -310,33 +493,37 @@ def register_inventory(app, db, User, Item, StockMove, now):
         if not user.trade:
             return redirect(url_for('inventory'))
         copy = inv()
-        if request.method != 'POST':
+        notebook, _books = current_notebook(user)
+        if not notebook:
             return redirect(url_for('inventory'))
+        if request.method != 'POST':
+            return redirect(url_for('inventory', nb=notebook.id))
         if Item.query.filter_by(user_id=user.id, active=True).count() >= MAX_ITEMS:
             flash(copy['full'])
-            return redirect(url_for('inventory'))
+            return redirect(url_for('inventory', nb=notebook.id))
         if request.form.get('blank'):
             item = Item(
-                user_id=user.id, name=copy['new_row'], category=None,
+                user_id=user.id, notebook_id=notebook.id, name=copy['new_row'], category=None,
                 qty=0, unit=DEFAULT_UNIT.get(user.trade, 'piece'), min_qty=2,
                 active=True, created_at=now())
             db.session.add(item)
             db.session.commit()
-            log.info('stock row user=%s item=%s', user.id, item.id)
-            return redirect(url_for('inventory', focus=item.id))
+            log.info('stock row user=%s item=%s nb=%s', user.id, item.id, notebook.id)
+            return redirect(url_for('inventory', nb=notebook.id, focus=item.id))
         item, extra = item_from_form(user, None, copy)
         if item is None:
             flash(extra)
-            return redirect(url_for('inventory')) if request.form.get('from_grid') else (
+            return redirect(url_for('inventory', nb=notebook.id)) if request.form.get('from_grid') else (
                 render_template('inventory_form.html', heading=copy['add'], item=None, form=request.form,
                                 default_unit=DEFAULT_UNIT.get(user.trade, 'piece')), 400)
+        item.notebook_id = notebook.id
         db.session.add(item)
         db.session.flush()
         if extra > 0:
             apply_move(item, 'open', extra, now())
         db.session.commit()
-        log.info('stock add item=%s user=%s', item.id, user.id)
-        return redirect(url_for('inventory', focus=item.id))
+        log.info('stock add item=%s user=%s nb=%s', item.id, user.id, notebook.id)
+        return redirect(url_for('inventory', nb=notebook.id, focus=item.id))
 
     @app.route('/stock/<int:iid>', methods=['GET', 'POST'])
     def inventory_item(iid):
@@ -355,7 +542,7 @@ def register_inventory(app, db, User, Item, StockMove, now):
             db.session.commit()
             log.info('stock edit item=%s user=%s', item.id, user.id)
             if request.form.get('from_grid'):
-                return redirect(url_for('inventory', focus=item.id))
+                return redirect(url_for('inventory', nb=item.notebook_id, focus=item.id))
             flash(copy['saved'], 'ok')
             return redirect(url_for('inventory_item', iid=item.id))
         moves = StockMove.query.filter_by(item_id=item.id).order_by(StockMove.id.desc()).limit(8).all()
@@ -430,12 +617,12 @@ def register_inventory(app, db, User, Item, StockMove, now):
             if wants_xhr():
                 return item_json(item, copy, ok=False, error=copy['invalid']), 400
             flash(copy['invalid'])
-            return redirect(url_for('inventory'))
+            return redirect(url_for('inventory', nb=item.notebook_id))
         db.session.commit()
         log.info('stock row save item=%s user=%s', item.id, user.id)
         if wants_xhr():
             return item_json(item, copy)
-        return redirect(url_for('inventory'))
+        return redirect(url_for('inventory', nb=item.notebook_id))
 
     @app.post('/stock/<int:iid>/in')
     def stock_in(iid):
@@ -459,7 +646,7 @@ def register_inventory(app, db, User, Item, StockMove, now):
         db.session.commit()
         log.info('stock remove item=%s user=%s', item.id, user.id)
         flash(inv()['removed'], 'ok')
-        return redirect(url_for('inventory'))
+        return redirect(url_for('inventory', nb=item.notebook_id))
 
     def mutate(iid, kind):
         user = shop()
@@ -475,13 +662,13 @@ def register_inventory(app, db, User, Item, StockMove, now):
             if wants_xhr():
                 return item_json(item, copy, ok=False, error=copy['invalid']), 400
             flash(copy['invalid'])
-            return redirect(request.referrer if request.referrer else url_for('inventory'))
+            return redirect(request.referrer if request.referrer else url_for('inventory', nb=item.notebook_id))
         after = apply_move(item, kind, amount, now())
         if after is None:
             if wants_xhr():
                 return item_json(item, copy, ok=False, error=copy['not_enough']), 409
             flash(copy['not_enough'])
-            return redirect(url_for('inventory'))
+            return redirect(url_for('inventory', nb=item.notebook_id))
         db.session.commit()
         log.info('stock %s item=%s user=%s', kind, item.id, user.id)
         if wants_xhr():
@@ -495,7 +682,7 @@ def register_inventory(app, db, User, Item, StockMove, now):
             else:
                 flash(copy['counted'], 'ok')
         flash_level(item, copy)
-        return redirect(url_for('inventory'))
+        return redirect(url_for('inventory', nb=item.notebook_id))
 
     def item_from_form(user, item, copy):
         f = request.form
@@ -518,6 +705,9 @@ def register_inventory(app, db, User, Item, StockMove, now):
             return None, copy['invalid']
         if item is None:
             item = Item(user_id=user.id, created_at=now(), active=True, qty=0)
+            notebook, _books = current_notebook(user)
+            if notebook:
+                item.notebook_id = notebook.id
         item.name = name
         item.category = category or None
         item.unit = unit

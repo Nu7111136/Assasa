@@ -1,7 +1,7 @@
 from datetime import timedelta
 from decimal import Decimal
 
-from main import Item, StockMove, User, db, now
+from main import Item, Notebook, StockMove, User, db, now
 from test_signup import signup, token
 
 
@@ -24,7 +24,8 @@ def test_stock_login_and_expired_redirect(client, app):
     assert client.get('/stock').status_code == 302
     signup(client)
     assert client.get('/stock').status_code == 200
-    assert 'What do you sell?' in client.get('/stock').text
+    assert 'Inventory' in client.get('/stock').text
+    assert 'Shop' in client.get('/stock').text
     with app.app_context():
         User.query.one().trial_ends_at = now() - timedelta(seconds=1)
         db.session.commit()
@@ -48,14 +49,20 @@ def test_trade_add_in_out_low_used_remove(client, app):
     assert blank.status_code == 302 and 'focus=' in (blank.location or '')
     grid = client.get(blank.location).text
     assert 'class="cell-name"' in grid
+    assert 'stock-name-cell' in grid
     assert 'name="unit"' in grid
     assert 'Box' in grid and 'Litre' in grid and 'Piece' in grid
     assert 'step-btn plus' in grid and 'step-btn minus' in grid
     assert 'step-form' in grid
     assert 'inputmode="decimal"' not in grid
     assert grid.find('stock-table-wrap') < grid.find('stock-add-btn')
-    assert '>Item</th>' in grid and '>Type</th>' in grid and '>Qty</th>' in grid and '>Price</th>' in grid
+    assert '>Product</th>' in grid and '>Unit</th>' in grid and '>Qty</th>' in grid and '>Price</th>' in grid
     assert 'cell-price' in grid
+    assert 'cell-unit' in grid
+    assert 'type-menu' not in grid
+    from pathlib import Path
+    css = (Path(__file__).resolve().parents[1] / 'static' / 'style.css').read_text(encoding='utf-8')
+    assert 'grid-template-areas:"name name name" "unit price qty"' in css
     assert 'barcode' not in grid.lower() and 'SKU' not in grid
     with app.app_context():
         blank_id = Item.query.filter_by(name='New item').one().id
@@ -70,8 +77,8 @@ def test_trade_add_in_out_low_used_remove(client, app):
         assert Decimal(str(milk.qty)) == Decimal('1')
     assert add_item(client, qty='3', sell_rs='100').status_code == 302
     grid = client.get('/stock').text
-    assert 'Sugar' in grid
-    assert grid.find('Milk') < grid.find('Sugar')
+    assert 'Sugar' in grid and 'Milk' in grid
+    assert grid.find('Sugar') < grid.find('Milk')
     xhr = client.post(
         f'/stock/{blank_id}/in',
         data={'qty': '1', 'csrf_token': csrf(client), 'quiet': '1'},
@@ -81,7 +88,7 @@ def test_trade_add_in_out_low_used_remove(client, app):
     payload = xhr.get_json()
     assert payload['ok'] is True and payload['qty'] == '2'
     with app.app_context():
-        sugar = Item.query.filter_by(name='Sugar').one()
+        sugar = Item.query.filter_by(name='Sugar', sell_rs=100).one()
         assert sugar.unit == 'kg'
         assert Decimal(str(sugar.qty)) == Decimal('3')
         iid = sugar.id
@@ -105,8 +112,8 @@ def test_trade_add_in_out_low_used_remove(client, app):
     blocked = client.post(f'/stock/{iid}/out', data={'qty': '1', 'csrf_token': csrf(client)}, follow_redirects=True)
     assert 'You do not have that many' in blocked.text
     assert client.post(f'/stock/{iid}/remove', data={'csrf_token': csrf(client, f'/stock/{iid}')}).status_code == 302
-    after = client.get('/stock').text
-    assert 'Sugar' not in after
+    with app.app_context():
+        assert db.session.get(Item, iid).active is False
 
 
 def test_other_shop_cannot_touch_item(client, app):
@@ -114,7 +121,7 @@ def test_other_shop_cannot_touch_item(client, app):
     pick_trade(client)
     add_item(client)
     with app.app_context():
-        iid = Item.query.one().id
+        iid = Item.query.filter_by(name='Sugar', sell_rs=100).one().id
     other = app.test_client()
     signup(other, phone='03111234567')
     pick_trade(other)
@@ -123,11 +130,11 @@ def test_other_shop_cannot_touch_item(client, app):
 
 
 def test_piece_rejects_fraction_and_set_count(client, app):
-    signup(client)
+    signup(client, trade='clothes')
     pick_trade(client, 'clothes')
     assert add_item(client, name='Shirt', qty='4', unit='piece', min_qty='1', category='').status_code == 302
     with app.app_context():
-        iid = Item.query.one().id
+        iid = Item.query.filter_by(name='Shirt', sell_rs=100).one().id
     bad = client.post('/stock/new', data=dict(
         name='Bad', qty='1.5', unit='piece', min_qty='1', csrf_token=csrf(client, '/stock')))
     assert bad.status_code == 400
@@ -146,10 +153,50 @@ def test_urdu_stock_and_keyboard(client):
     page = client.get('/stock').text
     assert 'مال' in page
     assert 'آئٹم شامل' in page
-    assert 'تعداد' in page and 'قسم' in page and 'قیمت' in page
+    assert 'تعداد' in page and 'اکائی' in page and 'قیمت' in page
     assert 'data-kb="ur"' in page
     assert 'id="ur-kb"' in page
     assert 'cell-qty' in page
     assert 'lang="en" dir="ltr"' in page
     assert 'inputmode="decimal"' not in page
     assert 'barcode' not in page.lower()
+
+
+def test_plumber_template_toast_and_three_notebooks(client, app):
+    done = signup(client, trade='plumber')
+    assert done.status_code == 302
+    assert done.location.endswith('/stock')
+    page = client.get('/stock').text
+    assert 'We put a few items in your inventory. Add and subtract them yourself.' in page
+    assert 'Workshop' in page
+    assert 'nb-chip' in page
+    assert 'PVC pipe' in page and 'Thread tape' in page and 'Elbow' in page and 'Tap' in page
+    assert 'cell-unit' in page
+    with app.app_context():
+        assert Notebook.query.filter_by(active=True).count() == 1
+        items = Item.query.filter_by(active=True).all()
+        assert len(items) == 4
+        assert all(Decimal(str(row.qty)) == Decimal('10') for row in items)
+    site_a = client.post('/stock/notebooks/new', data={'csrf_token': csrf(client)})
+    assert site_a.status_code == 302
+    site_b = client.post('/stock/notebooks/new', data={'csrf_token': csrf(client)})
+    assert site_b.status_code == 302
+    grid = client.get(site_b.location).text
+    assert 'Site A' in grid and 'Site B' in grid
+    assert 'PVC pipe' not in grid
+    blocked = client.post('/stock/notebooks/new', data={'csrf_token': csrf(client)})
+    assert blocked.status_code == 302 and blocked.location.endswith('/upgrade')
+    pay = client.get('/upgrade', follow_redirects=True).text
+    assert 'This plan includes 3 inventories' in pay
+    with app.app_context():
+        assert Notebook.query.filter_by(active=True).count() == 3
+
+
+def test_urdu_plumber_seed_toast(client):
+    client.get('/language/ur?page=signup')
+    signup(client, trade='plumber')
+    page = client.get('/stock').text
+    assert 'کچھ آئٹم ہم نے انوینٹری میں ڈال دیے ہیں' in page
+    assert 'ورکشاپ' in page
+    assert 'پی وی سی پائپ' in page
+    assert 'دیگر' in client.get('/').text

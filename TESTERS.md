@@ -6,10 +6,9 @@
 2. Optional install: **Android Chrome:** menu (?) > Add to Home screen / Install
    app. **iPhone Safari:** Share > Add to Home Screen > Add. If the install option
    is absent, use the browser link normally.
-3. Sign up with your own phone number (`03XXXXXXXXX`), a test name/address, a made-up
-   13-digit CNIC such as `12345-1234567-1`, and a new test-only 6-digit MPIN.
-   Email is optional; leave it blank for testing. Never enter a real CNIC or reuse
-   your JazzCash/bank MPIN. Phone and CNIC are not verified in this POC.
+3. Sign up with your own phone number (`03XXXXXXXXX`), a test name, a business
+   type, and a new test-only 6-digit MPIN. Never reuse your JazzCash/bank MPIN.
+   Phone is not verified in this POC.
 4. Switch **EN / اردو** and check layout. NZ must allowlist your phone number before
    tester controls appear. Contact NZ if **Next day / Reset** are missing.
 5. Tap **Next day** to add one simulated day each time. Watch **TEST: Day N** and
@@ -24,7 +23,7 @@
    **Do NOT transfer money. Never share a JazzCash PIN, OTP, or receipt.** Ask NZ
    before approving a live-looking TID: approval grants one calendar month and Reset does not undo it.
 7. Log out and log back in. On login, **Forgot MPIN?** needs the signup phone
-   plus the same CNIC; then set 6 new numbers. Report issues to NZ: phone/browser model, EN/Urdu,
+   Asasa office. Report issues to NZ: phone/browser model, EN/Urdu,
    steps, expected vs actual result, and a screenshot without phone/CNIC/MPIN/TID.
 
 

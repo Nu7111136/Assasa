@@ -29,7 +29,7 @@ PIN = '135790'
 
 
 def signup(client, **changes):
-    data = dict(name='Demo User', address='Fictional street', cnic='12345-1234567-1', phone='03001234567', email='', password=PIN, confirm=PIN, csrf_token=token(client))
+    data = dict(name='Demo User', phone='03001234567', password=PIN, confirm=PIN, trade='kiryana', csrf_token=token(client))
     data.update(changes)
     if 'password' in changes and 'confirm' not in changes:
         data['confirm'] = changes['password']
@@ -40,9 +40,23 @@ def test_signup_trial_password_and_dashboard(client, app):
     before = now()
     r = signup(client)
     assert r.status_code == 302
+    home = client.get('/').text
+    assert 'biz-grid' in home
+    assert 'Other' in home
+    assert 'type="checkbox"' in home and 'name="trade"' in home
+    assert 'type="radio"' not in home
+    assert 'id="cnic"' not in home and 'id="address"' not in home and 'id="email"' not in home
+    assert '/static/trades/plumber.jpg' in home
+    assert '/static/trades/other.jpg' in home
+    assert '/static/trades/sports.jpg' in home
+    assert '/static/trades/books.jpg' in home
+    assert '/static/trades/hardware.jpg' in home
+    assert '/static/trades/stitching.jpg' in home
     with app.app_context():
         u = User.query.one()
-        assert u.cnic == '1234512345671'
+        assert u.trade == 'kiryana'
+        assert u.cnic == ''
+        assert u.address == ''
         assert u.email is None
         assert u.password_hash != PIN
         end = u.trial_ends_at.replace(tzinfo=timezone.utc)
@@ -51,7 +65,7 @@ def test_signup_trial_password_and_dashboard(client, app):
     assert 'PKT' in client.get('/dashboard').text
 
 
-@pytest.mark.parametrize('change', [dict(cnic='123'), dict(cnic='a'*13), dict(phone='123'),dict(phone='04001234567'), dict(email='broken'),dict(password='short'),dict(password='12345'),dict(password='1234567'),dict(name=''),dict(address=''),dict(confirm='000000')])
+@pytest.mark.parametrize('change', [dict(phone='123'),dict(phone='04001234567'),dict(password='short'),dict(password='12345'),dict(password='1234567'),dict(name=''),dict(confirm='000000'),dict(trade=''),dict(trade='spaceship')])
 def test_invalid(client, change):
     assert signup(client, **change).status_code == 400
 
@@ -103,32 +117,18 @@ def test_csrf(client):
     assert client.post('/', data={'name':'Demo'}).status_code == 400
 
 
-def test_forgot_password_resets_with_phone_and_cnic(client, app):
+def test_forgot_password_points_to_office(client, app):
     signup(client)
     client.post('/logout', data={'csrf_token': token(client, '/login')})
     page = client.get('/forgot-password')
     assert page.status_code == 200
     assert 'Forgot MPIN' in client.get('/login').text
-    csrf = token(client, '/forgot-password')
-    assert client.post('/forgot-password', data=dict(
-        phone='03001234567', cnic='12345-1234567-1', password='246810',
-        confirm='111111', csrf_token=csrf)).status_code == 400
-    assert client.post('/forgot-password', data=dict(
-        phone='03001234567', cnic='99999-9999999-9', password='246810',
-        confirm='246810', csrf_token=csrf)).status_code == 401
-    assert client.post('/forgot-password', data=dict(
-        phone='03999999999', cnic='12345-1234567-1', password='246810',
-        confirm='246810', csrf_token=csrf)).status_code == 401
-    ok = client.post('/forgot-password', data=dict(
-        phone='03001234567', cnic='1234512345671', password='246810',
-        confirm='246810', csrf_token=csrf))
-    assert ok.status_code == 302 and ok.location.endswith('/login')
-    assert 'MPIN updated' in client.get('/login').text
+    assert 'Asasa office will set a new MPIN' in page.text
+    assert 'id="cnic"' not in page.text
+    assert 'id="password"' not in page.text
+    assert client.post('/forgot-password').status_code == 405
     assert client.post('/login', data=dict(
         phone='03001234567', password=PIN,
-        csrf_token=token(client, '/login'))).status_code == 401
-    assert client.post('/login', data=dict(
-        phone='03001234567', password='246810',
         csrf_token=token(client, '/login'))).status_code == 302
 
 
@@ -138,16 +138,15 @@ def test_forgot_password_works_when_trial_expired(client, app):
         User.query.one().trial_ends_at = now() - timedelta(seconds=1)
         db.session.commit()
     assert client.get('/dashboard').location.endswith('/upgrade')
-    reset = client.post('/forgot-password', data=dict(
-        phone='03001234567', cnic='12345-1234567-1', password='111222',
-        confirm='111222', csrf_token=token(client, '/forgot-password')))
-    assert reset.status_code == 302 and reset.location.endswith('/login')
+    page = client.get('/forgot-password')
+    assert page.status_code == 200
+    assert 'Asasa office will set a new MPIN' in page.text
 
 
 def test_urdu_and_session(client):
     r = client.get('/language/ur', follow_redirects=True)
     assert 'lang="ur" dir="rtl"' in r.text
-    assert 'شناختی کارڈ' in r.text
+    assert 'فون نمبر' in r.text
     assert 'dir="ltr"' in r.text
     assert 'lang="ur"' in client.get('/login').text
 
@@ -167,12 +166,15 @@ def test_keyboard_follows_screen_language(client):
     assert 'id="confirm"' not in login
 
     ur = client.get('/language/ur', follow_redirects=True).text
+    assert 'دیگر' in ur
+    assert 'پلمبر' in ur
     assert 'id="ur-kb"' in ur
     assert 'data-kb="ur"' in ur
     assert 'inputmode="none"' in ur
     assert 'lang="ur" dir="rtl" inputmode="none" data-kb="ur"' in ur
     assert 'lang="en" inputmode="tel"' in ur
-    assert 'id="cnic"' in ur and 'lang="en"' in ur
+    assert 'id="cnic"' not in ur and 'id="email"' not in ur
+    assert 'ہارڈویئر' in ur and 'سلائی' in ur and 'کھیل' in ur and 'کتابیں' in ur
     ur_login = client.get('/login').text
     assert 'id="ur-kb"' in ur_login
     assert 'data-kb="ur"' not in ur_login
@@ -195,10 +197,10 @@ def test_back_button_and_field_help(client):
     assert 'id="back-btn"' in login and 'Back' in login
     assert 'id="back-btn"' in forgot
     assert 'Start with 03' in login
-    assert 'Dashes appear automatically' in forgot
+    assert 'Asasa office will set a new MPIN' in forgot
     assert 'data-toggle="password"' in login
     assert '>MPIN</label>' in home and 'class="mpin"' in home
-    assert 'id="confirm"' in home and 'id="confirm"' in forgot
+    assert 'id="confirm"' in home and 'id="confirm"' not in forgot
     assert 'Six numbers, like JazzCash' in home
     assert 'Forgot MPIN?' in login
     assert 'Password' not in home and 'Password' not in login and 'Password' not in forgot
