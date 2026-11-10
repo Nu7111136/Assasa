@@ -44,6 +44,9 @@ def test_trade_add_in_out_low_used_remove(client, app):
     page = client.get('/stock').text
     assert 'Inventory' in page
     assert 'Add item' in page
+    assert 'stock-clock' in page
+    assert 'stock-watch' in page
+    assert 'row-del' in page
     assert 'inventory_form' not in page
     blank = client.post('/stock/new', data={'blank': '1', 'csrf_token': csrf(client)})
     assert blank.status_code == 302 and 'focus=' in (blank.location or '')
@@ -62,7 +65,7 @@ def test_trade_add_in_out_low_used_remove(client, app):
     assert 'type-menu' not in grid
     from pathlib import Path
     css = (Path(__file__).resolve().parents[1] / 'static' / 'style.css').read_text(encoding='utf-8')
-    assert 'grid-template-areas:"name name name" "unit price qty"' in css
+    assert 'grid-template-areas:"name name name del" "unit price qty del"' in css
     assert 'barcode' not in grid.lower() and 'SKU' not in grid
     with app.app_context():
         blank_id = Item.query.filter_by(name='New item').one().id
@@ -151,9 +154,13 @@ def test_urdu_stock_and_keyboard(client):
     assert client.get('/stock/new').status_code == 302
     client.post('/stock/new', data={'blank': '1', 'csrf_token': csrf(client)})
     page = client.get('/stock').text
-    assert 'مال' in page
-    assert 'آئٹم شامل' in page
+    assert 'شمار' in page
+    assert 'فہرست میں شامل کریں' in page
+    assert 'آئٹم شامل کریں' not in page
     assert 'تعداد' in page and 'اکائی' in page and 'قیمت' in page
+    assert 'چینی' in page and 'آٹا' in page
+    assert 'دکان' in page
+    assert 'نیا شمار' in page
     assert 'data-kb="ur"' in page
     assert 'id="ur-kb"' in page
     assert 'cell-qty' in page
@@ -169,6 +176,7 @@ def test_plumber_template_toast_and_three_notebooks(client, app):
     page = client.get('/stock').text
     assert 'We put a few items in your inventory. Add and subtract them yourself.' in page
     assert 'Workshop' in page
+    assert 'New inventory' in page
     assert 'nb-chip' in page
     assert 'PVC pipe' in page and 'Thread tape' in page and 'Elbow' in page and 'Tap' in page
     assert 'cell-unit' in page
@@ -198,5 +206,56 @@ def test_urdu_plumber_seed_toast(client):
     page = client.get('/stock').text
     assert 'کچھ آئٹم ہم نے انوینٹری میں ڈال دیے ہیں' in page
     assert 'ورکشاپ' in page
+    assert 'نیا شمار' in page
     assert 'پی وی سی پائپ' in page
+    assert 'ٹیپ' in page and 'ایلبو' in page and 'نل' in page
+    assert 'PVC pipe' not in page
     assert 'دیگر' in client.get('/').text
+
+
+def test_delete_item_xhr_and_inventory(client, app):
+    signup(client, trade='plumber')
+    page = client.get('/stock').text
+    assert 'row-del' in page
+    assert 'nb-del' not in page
+    with app.app_context():
+        item = Item.query.filter_by(active=True).first()
+        iid = item.id
+        first = Notebook.query.filter_by(active=True).one().id
+    xhr = client.post(
+        f'/stock/{iid}/remove',
+        data={'csrf_token': csrf(client), 'quiet': '1'},
+        headers={'X-Requested-With': 'fetch'},
+    )
+    assert xhr.status_code == 200
+    payload = xhr.get_json()
+    assert payload['ok'] is True and payload['id'] == iid
+    with app.app_context():
+        assert db.session.get(Item, iid).active is False
+    assert client.post('/stock/notebooks/new', data={'csrf_token': csrf(client)}).status_code == 302
+    grid = client.get('/stock').text
+    assert 'nb-del' in grid
+    with app.app_context():
+        second = Notebook.query.filter_by(active=True).order_by(Notebook.id.desc()).first().id
+        assert second != first
+    gone = client.post(f'/stock/notebooks/{first}/remove', data={'csrf_token': csrf(client)})
+    assert gone.status_code == 302
+    with app.app_context():
+        assert db.session.get(Notebook, first).active is False
+        assert Item.query.filter_by(notebook_id=first, active=True).count() == 0
+        assert Notebook.query.filter_by(active=True).count() == 1
+        assert db.session.get(Notebook, second).active is True
+    blocked = client.post(
+        f'/stock/notebooks/{second}/remove',
+        data={'csrf_token': csrf(client)},
+        follow_redirects=True,
+    )
+    assert 'Keep at least one inventory' in blocked.text
+    with app.app_context():
+        assert db.session.get(Notebook, second).active is True
+    other = app.test_client()
+    signup(other, phone='03111234567', trade='kiryana')
+    assert other.post(
+        f'/stock/notebooks/{second}/remove',
+        data={'csrf_token': csrf(other)},
+    ).status_code == 404

@@ -31,7 +31,7 @@ NB_FIRST = {
     'ur': dict(
         plumber='ورکشاپ', carpenter='ورکشاپ', hardware='دکان',
         kiryana='دکان', clothes='دکان', tailor='دکان', stitching='دکان',
-        food='باورچی خانہ', sports='دکان', books='دکان', other='مال'),
+        food='باورچی خانہ', sports='دکان', books='دکان', other='شمار'),
 }
 NB_EXTRA = {
     'en': ('Site A', 'Site B'),
@@ -66,6 +66,24 @@ TEMPLATES = {
     ),
 }
 
+INV_NEW_EN = 'New item'
+INV_NEW_UR = 'نیا آئٹم'
+
+
+def _template_names():
+    mapping = {
+        INV_NEW_EN: {'en': INV_NEW_EN, 'ur': INV_NEW_UR},
+        INV_NEW_UR: {'en': INV_NEW_EN, 'ur': INV_NEW_UR},
+    }
+    for trade in TRADES:
+        for en_name, ur_name in zip(TEMPLATES['en'][trade], TEMPLATES['ur'][trade]):
+            mapping[en_name] = {'en': en_name, 'ur': ur_name}
+            mapping[ur_name] = {'en': en_name, 'ur': ur_name}
+    return mapping
+
+
+NAME_MAP = _template_names()
+
 INV = {
     'en': dict(
         title='Inventory', notebook='Like your notebook',
@@ -79,7 +97,9 @@ INV = {
         add='Add item', add_more='Add more', name='Item name', new_row='New item',
         col_item='Product', col_unit='Unit', col_type='Unit', col_qty='Qty', col_price='Price',
         toast_seed='We put a few items in your inventory. Add and subtract them yourself.',
-        nb_new='New', nb_limit='This plan includes 3 inventories. Pay to add another.',
+        nb_new='New inventory', nb_limit='This plan includes 3 inventories. Pay to add another.',
+        nb_remove='Delete inventory', nb_ask='Remove this inventory and every item in it?',
+        nb_last='Keep at least one inventory.', nb_removed='Inventory removed.',
         site_mark='📍',
         total_items='Total items', need_stock='Need stock', value='Stock value',
         search_ph='Search item', home='Home', tab_stock='Stock',
@@ -119,7 +139,7 @@ INV = {
         one='1',
     ),
     'ur': dict(
-        title='مال', notebook='جیسا آپ کی کاپی',
+        title='شمار', notebook='جیسا آپ کی کاپی',
         pick='آپ کیا بیچتے ہیں؟',
         pick_help='قریب ترین آپشن دبائیں۔ بعد میں بدل سکتے ہیں۔',
         kiryana='کریانہ / چھوٹی دکان', food='کھانا', clothes='کپڑے',
@@ -127,13 +147,15 @@ INV = {
         hardware='ہارڈویئر', sports='کھیل', books='کتابیں', other='دیگر',
         open='میرا مال کھولیں',
         open_help='دکان کا سامان لکھیں۔ مال آئے یا جائے تو دبائیں۔',
-        add='آئٹم شامل کریں', add_more='اور شامل کریں', name='آئٹم کا نام', new_row='نیا آئٹم',
+        add='فہرست میں شامل کریں', add_more='اور شامل کریں', name='آئٹم کا نام', new_row='نیا آئٹم',
         col_item='آئٹم', col_unit='اکائی', col_type='اکائی', col_qty='تعداد', col_price='قیمت',
         toast_seed='کچھ آئٹم ہم نے انوینٹری میں ڈال دیے ہیں۔ خود سے جمع تفریق کریں۔',
-        nb_new='نیا', nb_limit='اس پلان میں 3 انوینٹری ہیں۔ ایک اور کے لیے ادائیگی کریں۔',
+        nb_new='نیا شمار', nb_limit='اس پلان میں 3 انوینٹری ہیں۔ ایک اور کے لیے ادائیگی کریں۔',
+        nb_remove='شمار ہٹائیں', nb_ask='یہ شمار اور اس کے تمام آئٹم ہٹائیں؟',
+        nb_last='کم از کم ایک شمار رکھیں۔', nb_removed='شمار ہٹ گیا۔',
         site_mark='📍',
         total_items='کل آئٹم', need_stock='مال چاہیے', value='مال کی قیمت',
-        search_ph='آئٹم تلاش کریں', home='گھر', tab_stock='مال',
+        search_ph='آئٹم تلاش کریں', home='گھر', tab_stock='شمار',
         stock_in_btn='مال آیا', stock_out_btn='مال گیا',
         pick_in='جو مال آیا وہ دبائیں', pick_out='جو مال گیا وہ دبائیں',
         min_mark='کم · حد', rs='روپے',
@@ -150,7 +172,7 @@ INV = {
         other_in='اور مقدار اندر', other_out='اور مقدار باہر',
         not_enough='اتنے پاس نہیں ہیں۔',
         low='مال کم ہے', empty='ختم', used='سب سے زیادہ استعمال', all='سب آئٹم',
-        find='آئٹم تلاش کریں', none='ابھی کوئی آئٹم نہیں۔ آئٹم شامل کریں دبائیں اور قطار میں نام لکھیں۔',
+        find='آئٹم تلاش کریں', none='ابھی کوئی آئٹم نہیں۔ فہرست میں شامل کریں دبائیں اور قطار میں نام لکھیں۔',
         none_low='کوئی چیز کم نہیں۔ ٹھیک ہے۔',
         none_used='جب آپ بیچیں یا استعمال کریں، سب سے زیادہ استعمال یہاں نظر آئے گا۔',
         none_find='اس نام کا آئٹم نہیں۔',
@@ -235,6 +257,22 @@ def extra_notebook_name(index, lang):
     return names[index]
 
 
+def show_item_name(name, lang):
+    pack = NAME_MAP.get(name or '')
+    if not pack:
+        return name
+    return pack.get(lang) or name
+
+
+def label_notebooks(books, trade, lang):
+    for index, nb in enumerate(books):
+        if index == 0:
+            nb.label = first_notebook_name(trade, lang)
+        else:
+            nb.label = extra_notebook_name(index - 1, lang)
+    return books
+
+
 def seed_first_notebook(db, Notebook, Item, StockMove, now, user, lang):
     """Create the first notebook. Seed 4 template items at qty 10 when the book is empty."""
     if not user or not user.trade:
@@ -317,6 +355,13 @@ def register_inventory(app, db, User, Item, StockMove, Notebook, now):
             abort(404)
         return item
 
+    def own_notebook(nid):
+        user = shop()
+        nb = db.session.get(Notebook, nid)
+        if not user or not nb or nb.user_id != user.id or not nb.active:
+            abort(404)
+        return nb
+
     def notebooks_of(user):
         return Notebook.query.filter_by(user_id=user.id, active=True).order_by(Notebook.id).all()
 
@@ -342,6 +387,8 @@ def register_inventory(app, db, User, Item, StockMove, Notebook, now):
         item.used_label = qty_label(item.used_qty)
         item.unit_short = copy.get(f'{item.unit}_short', copy.get(item.unit, item.unit))
         item.price_label = f"{copy['rs']} {item.sell_rs:,}" if item.sell_rs else '—'
+        shown = show_item_name(item.name, getattr(g, 'lang', 'en'))
+        item.show_name = '' if shown in (copy['new_row'], INV_NEW_EN, INV_NEW_UR) else shown
         return item
 
     def used_totals(user_id):
@@ -441,6 +488,7 @@ def register_inventory(app, db, User, Item, StockMove, Notebook, now):
                 empty = copy['none']
         focus_id = request.args.get('focus', type=int)
         first_id = books[0].id if books else None
+        label_notebooks(books, user.trade, getattr(g, 'lang', 'en'))
         return render_template(
             'inventory.html', heading=copy['title'], items=items, view=view, find=find,
             empty=empty, low_n=low_n, item_n=item_n, value_rs=value_rs,
@@ -484,6 +532,31 @@ def register_inventory(app, db, User, Item, StockMove, Notebook, now):
         db.session.commit()
         log.info('stock notebook user=%s nb=%s', user.id, nb.id)
         return redirect(url_for('inventory', nb=nb.id))
+
+    @app.post('/stock/notebooks/<int:nid>/remove')
+    def notebook_remove(nid):
+        user = shop()
+        if not user:
+            return redirect(url_for('login'))
+        copy = inv()
+        nb = own_notebook(nid)
+        books = notebooks_of(user)
+        if len(books) <= 1:
+            flash(copy['nb_last'])
+            if wants_xhr():
+                return jsonify(ok=False, error=copy['nb_last']), 400
+            return redirect(url_for('inventory', nb=nb.id))
+        nb.active = False
+        for item in Item.query.filter_by(user_id=user.id, notebook_id=nb.id, active=True):
+            item.active = False
+        db.session.commit()
+        log.info('stock notebook remove user=%s nb=%s', user.id, nb.id)
+        remain = notebooks_of(user)
+        go = remain[0].id if remain else None
+        if wants_xhr():
+            return jsonify(ok=True, id=nb.id, next=go)
+        flash(copy['nb_removed'], 'ok')
+        return redirect(url_for('inventory', nb=go) if go else url_for('inventory'))
 
     @app.route('/stock/new', methods=['GET', 'POST'])
     def inventory_new():
@@ -645,6 +718,8 @@ def register_inventory(app, db, User, Item, StockMove, Notebook, now):
         item.active = False
         db.session.commit()
         log.info('stock remove item=%s user=%s', item.id, user.id)
+        if wants_xhr():
+            return jsonify(ok=True, id=item.id)
         flash(inv()['removed'], 'ok')
         return redirect(url_for('inventory', nb=item.notebook_id))
 

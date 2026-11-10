@@ -64,6 +64,113 @@ document.querySelectorAll('form.row-save').forEach((form) => {
   });
 });
 
+function asasaSound(kind) {
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = asasaSound.ctx || new Ctx();
+    asasaSound.ctx = ctx;
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    if (kind === 'add') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+      osc.start(now);
+      osc.stop(now + 0.2);
+    } else {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(196, now);
+      osc.frequency.exponentialRampToValueAtTime(98, now + 0.16);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+      osc.start(now);
+      osc.stop(now + 0.24);
+    }
+  } catch (err) {}
+}
+
+(function stockSounds() {
+  let pending = null;
+  try {
+    pending = sessionStorage.getItem('asasa-sound');
+    if (pending) sessionStorage.removeItem('asasa-sound');
+  } catch (err) {}
+  function flush() {
+    if (!pending) return;
+    asasaSound(pending);
+    pending = null;
+  }
+  flush();
+  document.addEventListener('pointerdown', flush, { once: true });
+  document.querySelectorAll('form.stock-add-btn').forEach((form) => {
+    form.addEventListener('submit', () => {
+      try { sessionStorage.setItem('asasa-sound', 'add'); } catch (err) {}
+    });
+  });
+  document.querySelectorAll('form.nb-del-form').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      const ask = form.getAttribute('data-ask') || '';
+      if (ask && !window.confirm(ask)) {
+        event.preventDefault();
+        return;
+      }
+      try { sessionStorage.setItem('asasa-sound', 'del'); } catch (err) {}
+    });
+  });
+})();
+
+(function stockClock() {
+  const box = document.querySelector('.stock-clock');
+  if (!box) return;
+  const tz = box.getAttribute('data-tz') || 'Asia/Karachi';
+  const timeEl = box.querySelector('.stock-clock-time');
+  const dateEl = box.querySelector('.stock-clock-date');
+  const hourHand = box.querySelector('.watch-hour');
+  const minHand = box.querySelector('.watch-min');
+  const secHand = box.querySelector('.watch-sec');
+  const locale = document.documentElement.lang === 'ur' ? 'ur-PK' : 'en-PK';
+  const timeFmt = new Intl.DateTimeFormat(locale, {
+    hour: 'numeric', minute: '2-digit', second: '2-digit', hour12: true, timeZone: tz,
+  });
+  const dateFmt = new Intl.DateTimeFormat(locale, {
+    weekday: 'long', day: 'numeric', month: 'short', year: 'numeric', timeZone: tz,
+  });
+  const partsFmt = new Intl.DateTimeFormat('en-GB', {
+    hour: 'numeric', minute: 'numeric', second: 'numeric', hour12: false, timeZone: tz,
+    hourCycle: 'h23',
+  });
+
+  function tick() {
+    const now = new Date();
+    if (timeEl) {
+      timeEl.textContent = timeFmt.format(now);
+      timeEl.setAttribute('datetime', now.toISOString());
+    }
+    if (dateEl) dateEl.textContent = dateFmt.format(now);
+    const bits = {};
+    partsFmt.formatToParts(now).forEach((part) => {
+      if (part.type === 'hour' || part.type === 'minute' || part.type === 'second') {
+        bits[part.type] = parseInt(part.value, 10);
+      }
+    });
+    const h = bits.hour || 0;
+    const m = bits.minute || 0;
+    const s = bits.second || 0;
+    if (hourHand) hourHand.style.transform = 'rotate(' + (30 * (h % 12) + m * 0.5) + 'deg)';
+    if (minHand) minHand.style.transform = 'rotate(' + (6 * m + s * 0.1) + 'deg)';
+    if (secHand) secHand.style.transform = 'rotate(' + (6 * s) + 'deg)';
+  }
+  tick();
+  window.setInterval(tick, 1000);
+})();
+
 (function stockGrid() {
   const table = document.querySelector('.stock-table');
   if (!table) return;
@@ -152,6 +259,20 @@ document.querySelectorAll('form.row-save').forEach((form) => {
       const form = tr && tr.querySelector('form.row-save');
       if (!form) return;
       post(form.getAttribute('action'), fields(tr)).then((res) => paint(tr, res));
+    });
+  });
+  table.querySelectorAll('.row-del-form').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const ask = form.getAttribute('data-ask') || '';
+      if (ask && !window.confirm(ask)) return;
+      const tr = form.closest('tr');
+      const csrf = form.querySelector('[name="csrf_token"]');
+      post(form.getAttribute('action'), { csrf_token: csrf ? csrf.value : '', quiet: '1' }).then((res) => {
+        if (!res || !res.ok || !tr) return;
+        asasaSound('del');
+        tr.remove();
+      });
     });
   });
 })();

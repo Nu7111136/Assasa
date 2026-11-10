@@ -1,10 +1,36 @@
 {% extends 'base.html' %}{% block content %}
 <p class="stock-shop">{{ shop.name }}</p>
+<div class="stock-clock" data-tz="Asia/Karachi">
+<svg class="stock-watch" viewBox="0 0 100 100" aria-hidden="true">
+<circle class="watch-face" cx="50" cy="50" r="46"/>
+<g class="watch-ticks">
+<line x1="50" y1="10" x2="50" y2="18"/><line x1="50" y1="82" x2="50" y2="90"/>
+<line x1="10" y1="50" x2="18" y2="50"/><line x1="82" y1="50" x2="90" y2="50"/>
+</g>
+<line class="watch-hour" x1="50" y1="50" x2="50" y2="28"/>
+<line class="watch-min" x1="50" y1="50" x2="50" y2="16"/>
+<line class="watch-sec" x1="50" y1="50" x2="50" y2="14"/>
+<circle class="watch-cap" cx="50" cy="50" r="3.5"/>
+</svg>
+<div class="stock-clock-copy">
+<time class="stock-clock-time" lang="en" dir="ltr" datetime="">--:--</time>
+<span class="stock-clock-date"></span>
+<span class="stock-clock-tz">PKT</span>
+</div>
+</div>
 <h1 class="hero-title">{{ inv.title }}</h1>
 
 <nav class="nb-bar" aria-label="{{ inv.title }}">
 {% for nb in notebooks %}
-<a class="nb-chip{{ ' is-on' if nb.id==notebook.id }}" href="{{ url_for('inventory', nb=nb.id) }}">{% if nb.id==first_nb_id %}{{ trade_mark }} {% else %}{{ inv.site_mark }} {% endif %}{{ nb.name }}</a>
+<span class="nb-chip-wrap{{ ' is-on' if nb.id==notebook.id }}{{ ' has-del' if notebooks|length > 1 }}">
+<a class="nb-chip{{ ' is-on' if nb.id==notebook.id }}" href="{{ url_for('inventory', nb=nb.id) }}">{% if nb.id==first_nb_id %}{{ trade_mark }} {% else %}{{ inv.site_mark }} {% endif %}{{ nb.label }}</a>
+{% if notebooks|length > 1 %}
+<form method="post" action="{{ url_for('notebook_remove', nid=nb.id) }}" class="nb-del-form" data-ask="{{ inv.nb_ask }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="nb-del" aria-label="{{ inv.nb_remove }}">×</button>
+</form>
+{% endif %}
+</span>
 {% endfor %}
 <form method="post" action="{{ url_for('notebook_new') }}" class="nb-new-form">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -16,10 +42,11 @@
 <table class="stock-table">
 <thead>
 <tr>
-<th>{{ inv.col_item }}</th>
-<th>{{ inv.col_unit }}</th>
-<th>{{ inv.col_price }}</th>
-<th>{{ inv.col_qty }}</th>
+<th class="stock-name-h">{{ inv.col_item }}</th>
+<th class="stock-unit-h">{{ inv.col_unit }}</th>
+<th class="stock-price-h">{{ inv.col_price }}</th>
+<th class="stock-qty-h">{{ inv.col_qty }}</th>
+<th class="stock-del-h"><span class="visually-hidden">{{ inv.remove }}</span></th>
 </tr>
 </thead>
 <tbody>
@@ -30,7 +57,7 @@
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <input type="hidden" name="quiet" value="1">
 </form>
-<input form="save-{{ item.id }}" name="name" maxlength="80" class="cell-name" autocomplete="off" placeholder="{{ inv.name }}" value="{{ '' if item.name==inv.new_row else item.name }}"{% if focus_id==item.id %} autofocus{% endif %}{% if lang=='ur' %} lang="ur" dir="rtl" inputmode="none" data-kb="ur"{% else %} lang="en" dir="ltr" autocapitalize="words"{% endif %}>
+<input form="save-{{ item.id }}" name="name" maxlength="80" class="cell-name" autocomplete="off" placeholder="{{ inv.name }}" value="{{ item.show_name }}"{% if focus_id==item.id %} autofocus{% endif %}{% if lang=='ur' %} lang="ur" dir="rtl" inputmode="none" data-kb="ur"{% else %} lang="en" dir="ltr" autocapitalize="words"{% endif %}>
 </td>
 <td class="stock-unit-cell">
 <select form="save-{{ item.id }}" name="unit" class="cell-unit" lang="en" aria-label="{{ inv.col_unit }}">
@@ -59,9 +86,16 @@
 </form>
 </div>
 </td>
+<td class="stock-del-cell">
+<form method="post" action="{{ url_for('stock_remove', iid=item.id) }}" class="row-del-form" data-ask="{{ inv.remove }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="quiet" value="1">
+<button type="submit" class="row-del" aria-label="{{ inv.remove }}">×</button>
+</form>
+</td>
 </tr>
 {% else %}
-<tr class="stock-empty"><td colspan="4">{{ empty }}</td></tr>
+<tr class="stock-empty"><td colspan="5">{{ empty }}</td></tr>
 {% endfor %}
 </tbody>
 </table>

@@ -1,6 +1,6 @@
 <!doctype html><html lang="{{ lang }}" dir="{{ 'rtl' if lang == 'ur' else 'ltr' }}"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#4A0D1A"><meta name="robots" content="noindex,nofollow">
-<title>Asasa · {{ heading if heading is defined else (t[mode] if mode is defined else t.dashboard) }}</title><link rel="manifest" href="/static/manifest.webmanifest"><link rel="icon" href="/static/icon-192.png"><link rel="apple-touch-icon" href="/static/icon-192.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap"><link rel="stylesheet" href="/static/style.css?v=ui-25"></head>
+<title>Asasa · {{ heading if heading is defined else (t[mode] if mode is defined else t.dashboard) }}</title><link rel="manifest" href="/static/manifest.webmanifest"><link rel="icon" href="/static/icon-192.png"><link rel="apple-touch-icon" href="/static/icon-192.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap"><link rel="stylesheet" href="/static/style.css?v=ui-29"></head>
 <body><header>
 <div class="header-start">{% if back_href %}<a class="back" id="back-btn" href="{{ back_href }}">{{ t.back }}</a>{% endif %}
 <a class="brand" href="/">Asasa <span lang="ur">اثاثہ</span></a></div>
@@ -22,4 +22,4 @@
 <a href="{{ url_for('inventory') }}" class="{{ 'is-on' if request.endpoint in ('inventory','inventory_new','inventory_item','stock_move','stock_pick') }}">{{ inv.tab_stock }}</a>
 </nav>
 {% endif %}
-<script src="/static/app.js?v=ui-25" defer></script></body></html>
+<script src="/static/app.js?v=ui-29" defer></script></body></html>
