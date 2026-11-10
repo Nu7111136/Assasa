@@ -1,7 +1,7 @@
 {% extends 'base.html' %}{% block content %}
 {% include '_tester_buttons.html' %}
 <h1>{{ 'Upgrade your account' if lang=='en' else 'اپنا اکاؤنٹ اپ گریڈ کریں' }}</h1>
-<p class="payment-amount">{{ 'Rs 299 for 30 days' if lang=='en' else '30 دن کے لیے 299 روپے' }}</p>
+<p class="payment-amount">{{ 'Rs 299 for one month' if lang=='en' else 'ایک مہینے کے لیے 299 روپے' }}</p>
 <div class="pay-number" data-copy>
 <p class="pay-label">{{ 'Send JazzCash to this number' if lang=='en' else 'اس نمبر پر JazzCash بھیجیں' }}</p>
 {% if jazzcash %}<strong><bdi id="jazz-number">{{jazzcash}}</bdi></strong>
@@ -11,13 +11,13 @@
 {% if is_tester %}
 <aside class="sim-pay">
 <h2>{{ 'Test payment (no real JazzCash)' if lang=='en' else 'ٹیسٹ ادائیگی (اصل JazzCash نہیں)' }}</h2>
-<p>{{ 'Adds Rs 299 to the test wallet and opens 30 days on this account. Use this on Render while the real gateway is not connected.' if lang=='en' else 'ٹیسٹ والیٹ میں 299 روپے جمع ہوں گے اور اس اکاؤنٹ پر 30 دن کھل جائیں گے۔' }}</p>
+<p>{{ 'Adds Rs 299 to the test wallet and opens one month on this account. Use this on Render while the real gateway is not connected.' if lang=='en' else 'ٹیسٹ والیٹ میں 299 روپے جمع ہوں گے اور اس اکاؤنٹ پر ایک مہینہ کھل جائے گا۔' }}</p>
 <form method="post" action="{{ url_for('simulate_payment') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">{{ 'Pay Rs 299 (test)' if lang=='en' else '299 روپے ادا کریں (ٹیسٹ)' }}</button></form>
 </aside>
 {% endif %}
 <ol class="payment-steps">
-{% if lang=='en' %}<li>Open your JazzCash app or visit a JazzCash agent.</li><li>Send Rs 299 to the number above. Check the name before you confirm.</li><li>Keep the receipt. Copy the transaction ID (TID).</li><li>Paste the TID below. We turn on your 30 days after we see the money in JazzCash.</li>
-{% else %}<li>JazzCash ایپ کھولیں یا JazzCash ایجنٹ کے پاس جائیں۔</li><li>اوپر والے نمبر پر 299 روپے بھیجیں۔ تصدیق سے پہلے نام دیکھیں۔</li><li>رسید رکھیں۔ ٹرانزیکشن آئی ڈی (TID) نقل کریں۔</li><li>نیچے TID چسپاں کریں۔ رقم موصول ہونے کے بعد 30 دن کھل جائیں گے۔</li>{% endif %}</ol>
+{% if lang=='en' %}<li>Open your JazzCash app or visit a JazzCash agent.</li><li>Send Rs 299 to the number above. Check the name before you confirm.</li><li>Keep the receipt. Copy the transaction ID (TID).</li><li>Paste the TID below. We turn on one month after we see the money in JazzCash. The end date is the same day next month.</li>
+{% else %}<li>JazzCash ایپ کھولیں یا JazzCash ایجنٹ کے پاس جائیں۔</li><li>اوپر والے نمبر پر 299 روپے بھیجیں۔ تصدیق سے پہلے نام دیکھیں۔</li><li>رسید رکھیں۔ ٹرانزیکشن آئی ڈی (TID) نقل کریں۔</li><li>نیچے TID چسپاں کریں۔ رقم موصول ہونے کے بعد ایک مہینہ کھل جائے گا۔ میعاد اگلے مہینے کی وہی تاریخ ہے۔</li>{% endif %}</ol>
 <p class="notice">{{ 'Never enter a JazzCash PIN or OTP here. Do not pay again while your payment is pending.' if lang=='en' else 'یہاں JazzCash پن یا او ٹی پی ہرگز درج نہ کریں۔ زیرِ جائزہ ادائیگی دوبارہ نہ کریں۔' }}</p>
 <form method="post" class="stack"><input type="hidden" name="csrf_token" value="{{csrf_token()}}">
 <div class="field"><label for="tid">{{ 'JazzCash transaction ID (TID)' if lang=='en' else 'JazzCash ٹرانزیکشن آئی ڈی (TID)' }}</label>

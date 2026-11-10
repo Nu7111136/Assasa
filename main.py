@@ -1,7 +1,8 @@
 import hmac
-import math
+import logging
 import os
 import re
+import sys
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -12,7 +13,10 @@ from flask_wtf.csrf import CSRFProtect
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from sqlalchemy.exc import IntegrityError
+from werkzeug.exceptions import HTTPException
 from werkzeug.security import generate_password_hash, check_password_hash
+
+from billing import register_billing, utc
 
 load_dotenv()
 db = SQLAlchemy()
@@ -20,12 +24,37 @@ csrf = CSRFProtect()
 limiter = Limiter(key_func=get_remote_address, default_limits=[])
 
 TEXT = {
-'en': dict(signup='Create your account', name='Name', address='Address', cnic='CNIC', phone='Phone', email='Email (optional)', password='Password', submit='Start free trial', login='Log in', logout='Log out', dashboard='Your dashboard', trial='5 days free. No payment needed now.', price='Then Rs 299/month. No automatic charges.', have='Already registered?', new='New to Asasa?', days='Days left in your trial', ends='Trial ends (PKT)', expired='Your trial has ended.', welcome='Welcome', invalid='Please check your details. Name and address are required, CNIC must have 13 digits, phone must be 03XXXXXXXXX, email must be valid if supplied, and password must contain 8–128 characters.', duplicate='This phone is already registered. Please log in.', denied='Incorrect phone or password.', forgot='Forgot password?', forgot_title='Reset your password', forgot_help='Enter the phone and CNIC you used at signup, then choose a new password (8–128 characters).', forgot_submit='Save new password', forgot_denied='Phone or CNIC does not match our records.', forgot_ok='Password updated. Log in with your new password.', confirm='Confirm password', mismatch='Passwords must match and contain 8–128 characters.', back='Back', copy_number='Copy number', copied='Copied', show_pass='Show', hide_pass='Hide', hint_name='Write your name as people know you.', hint_address='Shop or home address is fine.', hint_cnic='13 numbers from your ID card. Dashes appear automatically.', hint_phone='Your mobile number. Start with 03, 11 digits in total.', hint_email='Optional. You can leave this empty.', hint_password='At least 8 letters or numbers. Do not share it.', hint_confirm='Type the same password again.', hint_tid='Copy the ID from your JazzCash receipt. Never type your PIN here.', privacy='POC: use fictional details only. CNIC and phone are not verified.', install='Install: Android → browser menu → Install app. iPhone → Share → Add to Home Screen.', offline='You are offline. Connect to the internet to sign up or log in.'),
-'ur': dict(signup='اپنا اکاؤنٹ بنائیں', name='نام', address='پتہ', cnic='شناختی کارڈ نمبر', phone='فون نمبر', email='ای میل (اختیاری)', password='پاس ورڈ', submit='مفت آزمائش شروع کریں', login='لاگ ان', logout='لاگ آؤٹ', dashboard='آپ کا ڈیش بورڈ', trial='پانچ دن مفت۔ ابھی ادائیگی کی ضرورت نہیں۔', price='اس کے بعد 299 روپے ماہانہ۔ خودکار ادائیگی نہیں ہوگی۔', have='پہلے سے اکاؤنٹ ہے؟', new='نیا اکاؤنٹ بنائیں؟', days='آزمائش کے باقی دن', ends='آزمائش کا اختتام (پاکستان وقت)', expired='آپ کی آزمائش ختم ہو گئی ہے۔', welcome='خوش آمدید', invalid='معلومات درست کریں۔ نام اور پتہ ضروری ہیں، شناختی نمبر 13 ہندسوں کا، فون 03 سے شروع ہونے والا 11 ہندسوں کا اور پاس ورڈ 8 سے 128 حروف کا ہونا چاہیے۔ ای میل دیں تو درست لکھیں۔', duplicate='یہ فون پہلے سے رجسٹرڈ ہے۔ لاگ ان کریں۔', denied='فون نمبر یا پاس ورڈ درست نہیں۔', forgot='پاس ورڈ بھول گئے؟', forgot_title='پاس ورڈ تبدیل کریں', forgot_help='رجسٹریشن والا فون اور شناختی نمبر درج کریں، پھر نیا پاس ورڈ بنائیں (8 سے 128 حروف)۔', forgot_submit='نیا پاس ورڈ محفوظ کریں', forgot_denied='فون نمبر یا شناختی نمبر درست نہیں۔', forgot_ok='پاس ورڈ بدل گیا۔ نئے پاس ورڈ سے لاگ ان کریں۔', confirm='پاس ورڈ دوبارہ لکھیں', mismatch='دونوں پاس ورڈ ایک جیسے ہونے چاہئیں، 8 سے 128 حروف۔', back='واپس', copy_number='نمبر کاپی کریں', copied='کاپی ہو گیا', show_pass='دکھائیں', hide_pass='چھپائیں', hint_name='وہ نام لکھیں جس سے لوگ آپ کو جانتے ہیں۔', hint_address='دکان یا گھر کا پتہ کافی ہے۔', hint_cnic='شناختی کارڈ کے 13 ہندسے۔ ڈیش خود لگ جائیں گے۔', hint_phone='آپ کا موبائل نمبر۔ 03 سے شروع، کل 11 ہندسے۔', hint_email='اختیاری ہے۔ خالی چھوڑ سکتے ہیں۔', hint_password='کم از کم 8 حروف۔ کسی کو نہ بتائیں۔', hint_confirm='وہی پاس ورڈ دوبارہ لکھیں تاکہ غلطی نہ ہو۔', hint_tid='JazzCash رسید سے آئی ڈی نقل کریں۔ پن یہاں نہ لکھیں۔', privacy='یہ ابتدائی نمونہ ہے۔ صرف فرضی معلومات استعمال کریں۔ شناختی کارڈ اور فون کی تصدیق نہیں ہوتی۔', install='اینڈرائیڈ: براؤزر مینو سے ایپ انسٹال کریں۔ آئی فون: شیئر سے ہوم اسکرین پر شامل کریں۔', offline='انٹرنیٹ بند ہے۔ رجسٹریشن یا لاگ ان کے لیے انٹرنیٹ سے جڑیں۔')}
+'en': dict(signup='Create your account', name='Name', address='Address', cnic='CNIC', phone='Phone', email='Email (optional)', password='Password', submit='Start free trial', login='Log in', logout='Log out', dashboard='Your dashboard', trial='5 days free. No payment needed now.', price='Then Rs 299/month. No automatic charges.', have='Already registered?', new='New to Asasa?', days='Days left in your trial', ends='Trial ends (PKT)', expired='Your trial has ended.', paid_until_label='Paid until (PKT)', paid_help='Pay again by this date to keep the next month. The day stays the same each month, or the last day if that month is shorter.', welcome='Welcome', invalid='Please check your details. Name and address are required, CNIC must have 13 digits, phone must be 03XXXXXXXXX, email must be valid if supplied, and password must contain 8–128 characters.', duplicate='This phone is already registered. Please log in.', denied='Incorrect phone or password.', forgot='Forgot password?', forgot_title='Reset your password', forgot_help='Enter the phone and CNIC you used at signup, then choose a new password (8–128 characters).', forgot_submit='Save new password', forgot_denied='Phone or CNIC does not match our records.', forgot_ok='Password updated. Log in with your new password.', confirm='Confirm password', mismatch='Passwords must match and contain 8–128 characters.', back='Back', copy_number='Copy number', copied='Copied', show_pass='Show', hide_pass='Hide', hint_name='Write your name as people know you.', hint_address='Shop or home address is fine.', hint_cnic='13 numbers from your ID card. Dashes appear automatically.', hint_phone='Your mobile number. Start with 03, 11 digits in total.', hint_email='Optional. You can leave this empty.', hint_password='At least 8 letters or numbers. Do not share it.', hint_confirm='Type the same password again.', hint_tid='Copy the ID from your JazzCash receipt. Never type your PIN here.', privacy='POC: use fictional details only. CNIC and phone are not verified.', install='Install: Android → browser menu → Install app. iPhone → Share → Add to Home Screen.', offline='You are offline. Connect to the internet to sign up or log in.'),
+'ur': dict(signup='اپنا اکاؤنٹ بنائیں', name='نام', address='پتہ', cnic='شناختی کارڈ نمبر', phone='فون نمبر', email='ای میل (اختیاری)', password='پاس ورڈ', submit='مفت آزمائش شروع کریں', login='لاگ ان', logout='لاگ آؤٹ', dashboard='آپ کا ڈیش بورڈ', trial='پانچ دن مفت۔ ابھی ادائیگی کی ضرورت نہیں۔', price='اس کے بعد 299 روپے ماہانہ۔ خودکار ادائیگی نہیں ہوگی۔', have='پہلے سے اکاؤنٹ ہے؟', new='نیا اکاؤنٹ بنائیں؟', days='آزمائش کے باقی دن', ends='آزمائش کا اختتام (پاکستان وقت)', expired='آپ کی آزمائش ختم ہو گئی ہے۔', paid_until_label='ادائیگی کی میعاد (پاکستان وقت)', paid_help='اگلے مہینے کے لیے اس تاریخ تک دوبارہ ادا کریں۔ تاریخ ہر مہینے وہی رہتی ہے، چھوٹے مہینے میں آخری دن۔', welcome='خوش آمدید', invalid='معلومات درست کریں۔ نام اور پتہ ضروری ہیں، شناختی نمبر 13 ہندسوں کا، فون 03 سے شروع ہونے والا 11 ہندسوں کا اور پاس ورڈ 8 سے 128 حروف کا ہونا چاہیے۔ ای میل دیں تو درست لکھیں۔', duplicate='یہ فون پہلے سے رجسٹرڈ ہے۔ لاگ ان کریں۔', denied='فون نمبر یا پاس ورڈ درست نہیں۔', forgot='پاس ورڈ بھول گئے؟', forgot_title='پاس ورڈ تبدیل کریں', forgot_help='رجسٹریشن والا فون اور شناختی نمبر درج کریں، پھر نیا پاس ورڈ بنائیں (8 سے 128 حروف)۔', forgot_submit='نیا پاس ورڈ محفوظ کریں', forgot_denied='فون نمبر یا شناختی نمبر درست نہیں۔', forgot_ok='پاس ورڈ بدل گیا۔ نئے پاس ورڈ سے لاگ ان کریں۔', confirm='پاس ورڈ دوبارہ لکھیں', mismatch='دونوں پاس ورڈ ایک جیسے ہونے چاہئیں، 8 سے 128 حروف۔', back='واپس', copy_number='نمبر کاپی کریں', copied='کاپی ہو گیا', show_pass='دکھائیں', hide_pass='چھپائیں', hint_name='وہ نام لکھیں جس سے لوگ آپ کو جانتے ہیں۔', hint_address='دکان یا گھر کا پتہ کافی ہے۔', hint_cnic='شناختی کارڈ کے 13 ہندسے۔ ڈیش خود لگ جائیں گے۔', hint_phone='آپ کا موبائل نمبر۔ 03 سے شروع، کل 11 ہندسے۔', hint_email='اختیاری ہے۔ خالی چھوڑ سکتے ہیں۔', hint_password='کم از کم 8 حروف۔ کسی کو نہ بتائیں۔', hint_confirm='وہی پاس ورڈ دوبارہ لکھیں تاکہ غلطی نہ ہو۔', hint_tid='JazzCash رسید سے آئی ڈی نقل کریں۔ پن یہاں نہ لکھیں۔', privacy='یہ ابتدائی نمونہ ہے۔ صرف فرضی معلومات استعمال کریں۔ شناختی کارڈ اور فون کی تصدیق نہیں ہوتی۔', install='اینڈرائیڈ: براؤزر مینو سے ایپ انسٹال کریں۔ آئی فون: شیئر سے ہوم اسکرین پر شامل کریں۔', offline='انٹرنیٹ بند ہے۔ رجسٹریشن یا لاگ ان کے لیے انٹرنیٹ سے جڑیں۔')}
+
+
+log = logging.getLogger('asasa')
 
 
 def now():
     return datetime.now(timezone.utc)
+
+
+def configure_logging(app):
+    """Stdout logs for local terminal and Render → Logs. LOG_LEVEL=INFO|DEBUG."""
+    allowed = {'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'}
+    level_name = (os.getenv('LOG_LEVEL') or 'INFO').upper()
+    if app.config.get('TESTING') and 'LOG_LEVEL' not in os.environ:
+        level_name = 'WARNING'
+    if level_name not in allowed:
+        level_name = 'INFO'
+    level = getattr(logging, level_name)
+    app.config['LOG_LEVEL'] = level_name
+    log.setLevel(level)
+    log.propagate = False
+    if not any(isinstance(handler, logging.StreamHandler) for handler in log.handlers):
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s [asasa] %(message)s'))
+        handler.setLevel(level)
+        log.addHandler(handler)
+    else:
+        for handler in log.handlers:
+            handler.setLevel(level)
 
 
 class User(db.Model):
@@ -38,6 +67,7 @@ class User(db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False)
     paid_until = db.Column(db.DateTime(timezone=True))
+    billing_day = db.Column(db.Integer)
     trial_ends_at = db.Column(db.DateTime(timezone=True), nullable=False)
 
 
@@ -72,6 +102,7 @@ def create_app(config=None):
     db.init_app(app)
     csrf.init_app(app)
     limiter.init_app(app)
+    configure_logging(app)
 
     @app.before_request
     def language():
@@ -96,6 +127,34 @@ def create_app(config=None):
         r.headers['X-Frame-Options'] = 'DENY'
         r.headers['Referrer-Policy'] = 'same-origin'
         return r
+
+    @app.after_request
+    def log_request(r):
+        path = request.path
+        quiet = path.startswith('/static/') or path == '/sw.js'
+        line = '%s %s -> %s user=%s readonly=%s trial_days=%s paid=%s'
+        args = (request.method, path, r.status_code,
+                getattr(getattr(g, 'user', None), 'id', None),
+                getattr(g, 'readonly', None), getattr(g, 'trial_days', None),
+                getattr(g, 'paid', None))
+        if quiet:
+            log.debug(line, *args)
+        else:
+            log.info(line, *args)
+        return r
+
+    @app.errorhandler(Exception)
+    def unhandled(err):
+        if isinstance(err, HTTPException):
+            if err.code >= 500:
+                log.exception('HTTP %s on %s %s', err.code, request.method, request.path)
+            else:
+                log.info('HTTP %s on %s %s', err.code, request.method, request.path)
+            return err
+        log.exception('Unhandled error on %s %s', request.method, request.path)
+        if app.debug or app.config.get('TESTING'):
+            raise err
+        return ('Internal Server Error', 500)
 
     @app.get('/language/<lang>')
     def switch_language(lang):
@@ -134,6 +193,7 @@ def create_app(config=None):
             lang = g.lang
             session.clear()
             session.update(user_id=user.id, lang=lang)
+            log.info('signup ok user=%s', user.id)
             return redirect(url_for('dashboard'))
         return render_template('auth.html', mode='signup')
 
@@ -150,11 +210,13 @@ def create_app(config=None):
                 app.config['_DUMMY_HASH'] = fallback
             ok = check_password_hash(user.password_hash if user else fallback, password[:129])
             if not user or not ok or len(password) > 128:
+                log.info('login failed')
                 flash(g.t['denied'])
                 return render_template('auth.html', mode='login'), 401
             lang = g.lang
             session.clear()
             session.update(user_id=user.id, lang=lang)
+            log.info('login ok user=%s', user.id)
             return redirect(url_for('dashboard'))
         return render_template('auth.html', mode='login')
 
@@ -180,6 +242,7 @@ def create_app(config=None):
                 return render_template('auth.html', mode='forgot'), 401
             user.password_hash = generate_password_hash(password)
             db.session.commit()
+            log.info('password reset user=%s', user.id)
             flash(g.t['forgot_ok'], 'ok')
             return redirect(url_for('login'))
         return render_template('auth.html', mode='forgot')
@@ -189,9 +252,7 @@ def create_app(config=None):
         user = db.session.get(User, session.get('user_id')) if session.get('user_id') else None
         if not user:
             return redirect(url_for('login'))
-        end = user.trial_ends_at
-        if end.tzinfo is None:
-            end = end.replace(tzinfo=timezone.utc)
+        end = utc(user.trial_ends_at) or now()
         days = g.trial_days
         return render_template('dashboard.html', user=user, days=days,
                                end=end.astimezone(ZoneInfo('Asia/Karachi')).strftime('%d %b %Y, %H:%M PKT'))
@@ -213,8 +274,10 @@ def create_app(config=None):
         db.create_all()
         print('Database initialized.')
 
-    from billing import register_billing
     register_billing(app, db, User, Payment, now)
+    db_uri = app.config.get('SQLALCHEMY_DATABASE_URI') or ''
+    db_kind = 'postgres' if 'postgres' in db_uri else 'sqlite'
+    log.info('Asasa started log_level=%s db=%s', app.config['LOG_LEVEL'], db_kind)
     return app
 
 # Allows the requested `flask --app main run` command.

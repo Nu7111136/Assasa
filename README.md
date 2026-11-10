@@ -25,6 +25,9 @@ python -m flask --app wsgi run --host 0.0.0.0 --port 5088
 pytest -q
 ```
 
+`LOG_LEVEL` is `INFO` by default (`DEBUG` for entitlement detail). Logs go to
+stdout: the terminal locally, and Render → service → Logs in hosting.
+
 Open http://127.0.0.1:5088. A phone needs the computer's LAN address; PWA service
 workers/installability require HTTPS or localhost. On real phones use a private
 HTTPS deployment. Android: Chrome menu → Install app; iPhone: Safari Share → Add
@@ -130,7 +133,10 @@ Set `ADMIN_PHONES` to a comma-separated allowlist of **existing registered** pho
 numbers. No default admin account is created. These users must still log in with
 passwords. Visit `/admin/payments`, verify the funds in JazzCash, then approve or
 reject. A TID is only a claim, never automatic proof of payment. Approval grants
-**30 days starting at approval time**, not from trial expiry or previous paid date.
+**one PKT calendar month** from approval time (same date next month; shorter
+months use the last day). A second approval while still paid stacks another
+month from the current `paid_until`. After expiry, a new payment starts a
+fresh month from that day.
 Duplicate TIDs are rejected across all accounts; reviews are one-shot and atomic.
 Rejected TIDs cannot be reused: arrange corrected payment details with the admin.
 The configured destination must be checked/owned by the operator before real use.
@@ -156,6 +162,7 @@ using actual server time. CSS/service-worker version: trial-4.
 
 Expired unpaid accounts redirect to /upgrade (including simulated expiry).
 Tester Next day/Reset controls are available on Dashboard and Upgrade. Paid access
-is checked against real time; previews never shorten a paid subscription.
+follows the tester clock the same way the trial does, so Next day can reach the
+paid-until date. Reset returns to real time without changing stored dates.
 Upgrade, logout/login, tester actions, and admin payment review for admins remain
 accessible. Static/PWA assets and language switching remain available.

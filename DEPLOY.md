@@ -37,13 +37,16 @@
 7. **Expect free-tier pauses.** Render sleeps when idle; the first load may take
    roughly 30-50 seconds, sometimes over a minute. Neon can also pause when idle.
    Wait and refresh once; this is not an installed-app/offline mode failure.
+   App logs are stdout. Open the service → **Logs**. Set `LOG_LEVEL=DEBUG` in
+   Environment for entitlement detail, then restart. Do not paste logs that
+   contain personal details.
    Free-tier limits can change: review the plan screens and do not enable paid
    services or upgrades unless you intend to pay. Internet is needed for login/data.
 8. **Test safely.** This is a separate tester database, not a real billing launch.
    Use fake CNIC/address details and test passwords; phone/email/CNIC are not verified.
    Fake TIDs are test submissions, NOT proof of payment. Do not ask testers to send
    real money. Never approve a fake TID as a real payment. Approval changes the
-   actual account in this test database and grants 30 days; reset does not undo it.
+   actual account in this test database and grants one calendar month; reset does not undo it.
    Never publish database exports, logs containing personal details, or credentials.
 9. **Updates.** Automatic deployment is off in this Blueprint. After reviewing and
    pushing a later commit yourself, use Render's Manual Deploy. Keep Neon credentials

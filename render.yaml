@@ -5,7 +5,7 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: flask --app main upgrade-db && gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --threads 4
+    startCommand: flask --app main upgrade-db && gunicorn wsgi:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --access-logfile - --error-logfile -
     healthCheckPath: /login
     autoDeployTrigger: 'off'
     envVars:
@@ -21,6 +21,8 @@ services:
         sync: false
       - key: APP_ENV
         value: production
+      - key: LOG_LEVEL
+        value: INFO
       - key: COOKIE_SECURE
         value: "1"
       - key: PYTHON_VERSION

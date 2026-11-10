@@ -1,4 +1,7 @@
-from datetime import timedelta, timezone
+import logging
+import math
+from datetime import datetime, timedelta, timezone
+from billing import pkt, remaining_seconds, utc
 from main import db, User, Payment, now
 from test_signup import signup, token
 
@@ -13,11 +16,16 @@ def test_banner_days(client,app):
     for n in range(8):
         page=client.get('/dashboard',follow_redirects=True)
         assert page.status_code==200
-        assert ('Trial ended, pay to continue' if n>=5 else f'{5-n} '+('day left' if n==4 else 'days left')) in page.text
+        if n>=5:
+            assert 'Trial ended, pay to continue' not in page.text
+            assert 'Upgrade your account' in page.text
+        else:
+            assert f'{5-n} '+('day left' if n==4 else 'days left') in page.text
         assert 'Upgrade Now' in page.text
-        if n>=5:assert 'Upgrade your account' in page.text
         assert step(client).status_code==302
-    assert 'Trial ended' in client.get('/upgrade').text
+    upgrade=client.get('/upgrade').text
+    assert 'Trial ended, pay to continue' not in upgrade
+    assert 'Upgrade Now' in upgrade
     client.get('/language/ur')
     assert '\u0627\u06af\u0644\u0627 \u062f\u0646' in client.get('/dashboard',follow_redirects=True).text
     assert step(client,'reset').status_code==302
@@ -62,11 +70,15 @@ def test_payment_approval_permissions_and_repeated_review(client,app):
     before=now()
     assert client.post(f'/admin/payments/{pid}/approve',data={'csrf_token':csrf}).status_code==302
     with app.app_context():
-        u=User.query.one();end=u.paid_until.replace(tzinfo=timezone.utc)
-        assert before+timedelta(days=30)<=end<=now()+timedelta(days=30)
+        u=User.query.one();end=utc(u.paid_until)
+        assert u.billing_day in (pkt(before).day, pkt(now()).day)
+        assert now()+timedelta(days=27) < end < now()+timedelta(days=32)
         assert Payment.query.one().status=='approved'
+    paid_page=client.get('/dashboard').text
     assert client.post(f'/admin/payments/{pid}/approve',data={'csrf_token':csrf}).status_code==409
-    assert 'Paid access active' in client.get('/dashboard').text
+    assert 'Paid access active' in paid_page
+    assert 'Paid until (PKT)' in paid_page
+    assert 'Days left in your trial' not in paid_page
 
 
 def test_reject_duplicates_and_validation(client,app):
@@ -102,7 +114,11 @@ def test_simulate_payment_fills_test_wallet(client,app):
         step(client)
     ok = client.post('/upgrade/simulate', data={'csrf_token': token(client, '/upgrade')})
     assert ok.status_code == 302 and ok.location.endswith('/dashboard')
-    assert 'Paid access active' in client.get('/dashboard').text
+    paid_page = client.get('/dashboard').text
+    assert 'Paid access active' in paid_page
+    assert 'Paid until (PKT)' in paid_page
+    assert 'Days left in your trial' not in paid_page
+    assert 'Your trial has ended' not in paid_page
     admin = client.get('/admin/payments')
     assert 'Rs 299' in admin.text
     with app.app_context():
@@ -126,11 +142,20 @@ def test_paid_expiry(client,app):
         u.trial_ends_at=now()-timedelta(days=1)
         u.paid_until=now()+timedelta(days=1)
         db.session.commit()
-    assert 'Paid access active' in client.get('/dashboard').text
+    paid_page=client.get('/dashboard').text
+    assert 'Paid access active' in paid_page
+    assert 'Paid until (PKT)' in paid_page
+    assert 'Days left in your trial' not in paid_page
+    assert 'Your trial has ended' not in paid_page
+    assert 'Trial ends (PKT)' not in paid_page
+    assert 'Then Rs 299/month' not in paid_page
     with app.app_context():
         User.query.one().paid_until=now()-timedelta(seconds=1)
         db.session.commit()
-    assert 'Trial ended, pay to continue' in client.get('/dashboard',follow_redirects=True).text
+    expired=client.get('/dashboard',follow_redirects=True).text
+    assert 'Trial ended, pay to continue' not in expired
+    assert 'Upgrade Now' in expired
+    assert 'Upgrade your account' in expired
 
 
 def test_upgrade_cli_preserves_legacy_users(tmp_path):
@@ -183,7 +208,9 @@ def test_non_tester_and_session_isolation(client,app):
     assert '5 days left' in html
     assert 'tester-buttons' not in html and 'TEST: Day' not in html
     assert step(other).status_code==403
-    assert 'Trial ended' in client.get('/dashboard',follow_redirects=True).text
+    ended=client.get('/dashboard',follow_redirects=True).text
+    assert 'Trial ended, pay to continue' not in ended
+    assert 'Upgrade Now' in ended
     # Same account in a different browser does not inherit simulation.
     another=app.test_client()
     with client.session_transaction() as s: uid=s['user_id']
@@ -239,12 +266,61 @@ def test_real_expiry_admin_access_and_paid_simulation(client,app):
     # Reset cannot revive a genuinely expired trial.
     assert step(client,'reset').location.endswith('/upgrade')
     with app.app_context():
-        User.query.one().paid_until=now()+timedelta(days=1)
+        User.query.one().paid_until=now()+timedelta(days=2)
         db.session.commit()
-    for _ in range(7):assert step(client).location.endswith('/dashboard')
-    assert client.get('/dashboard').status_code==200
+    assert step(client).location.endswith('/dashboard')
     assert 'Paid access active' in client.get('/dashboard').text
+    assert step(client).location.endswith('/upgrade')
     assert client.get('/admin/payments').status_code==200
+
+
+def test_paid_calendar_month_expires_on_tester_clock(client, app):
+    app.config['TESTER_PHONES']='03001234567'
+    signup(client)
+    for _ in range(6):
+        step(client)
+    assert client.post('/upgrade/simulate', data={'csrf_token': token(client, '/upgrade')}).status_code == 302
+    assert step(client, 'reset').location.endswith('/dashboard')
+    with app.app_context():
+        u = User.query.one()
+        end = utc(u.paid_until)
+        assert u.billing_day
+        days = math.ceil((end - now()).total_seconds() / 86400)
+    for _ in range(max(days, 1) - 1):
+        assert step(client).location.endswith('/dashboard')
+    assert step(client).location.endswith('/upgrade')
+    assert 'Upgrade your account' in client.get('/upgrade').text
+
+
+def test_remaining_seconds_naive_aware_and_missing():
+    aware = datetime(2026, 11, 10, 12, 0, tzinfo=timezone.utc)
+    naive = datetime(2026, 11, 10, 12, 0)
+    later = datetime(2026, 11, 15, 12, 0)
+    assert remaining_seconds(None, aware) == 0
+    assert remaining_seconds(aware, None) == 0
+    assert remaining_seconds(naive, aware) == 0
+    assert remaining_seconds(aware, naive) == 0
+    assert remaining_seconds(later, naive) == 5 * 86400
+    assert utc(None) is None
+    assert utc(naive).tzinfo is timezone.utc
+    assert utc(aware) is aware
+
+
+def test_naive_expired_trial_renders_upgrade(client, app, caplog):
+    caplog.set_level(logging.INFO, logger='asasa')
+    signup(client)
+    with app.app_context():
+        u = User.query.one()
+        u.trial_ends_at = datetime(2020, 1, 1, 0, 0, 0)
+        db.session.commit()
+    dashboard = client.get('/dashboard')
+    assert dashboard.status_code == 302 and dashboard.location.endswith('/upgrade')
+    upgrade = client.get('/upgrade')
+    assert upgrade.status_code == 200
+    assert 'Upgrade your account' in upgrade.text
+    assert 'Upgrade Now' in upgrade.text
+    assert 'trial expired, redirecting to upgrade' in caplog.text
+    assert 'GET /upgrade -> 200' in caplog.text
 
 
 def test_expired_logout_and_anonymous_access(client,app):

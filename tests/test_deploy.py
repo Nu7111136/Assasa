@@ -29,6 +29,8 @@ def test_postgresql_schema_compiles_and_migration_preserves_timezone():
         assert 'CREATE TABLE' in ddl and 'TIMESTAMP WITH TIME ZONE' in ddl
     assert User.__table__.c.paid_until.type.compile(dialect=dialect) == 'TIMESTAMP WITH TIME ZONE'
     assert User.__table__.c.paid_until.type.compile(dialect=sqlite.dialect()) == 'DATETIME'
+    user_ddl = str(CreateTable(User.__table__).compile(dialect=dialect))
+    assert 'billing_day' in user_ddl
 
 
 def test_blueprint_and_wsgi():
@@ -36,7 +38,7 @@ def test_blueprint_and_wsgi():
     for text in ('plan: free', 'runtime: python', 'pip install -r requirements.txt',
                  'flask --app main upgrade-db && gunicorn wsgi:app',
                  'generateValue: true', 'sync: false', 'value: production',
-                 'key: COOKIE_SECURE', 'key: PAYMENT_JAZZCASH_NUMBER', '--bind 0.0.0.0:$PORT'):
+                 'key: COOKIE_SECURE', 'key: PAYMENT_JAZZCASH_NUMBER', 'key: LOG_LEVEL', '--bind 0.0.0.0:$PORT'):
         assert text in yaml
     assert '03036666758' not in yaml
     requirements = (ROOT/'requirements.txt').read_text(encoding='utf-8')

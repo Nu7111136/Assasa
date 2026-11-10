@@ -1,7 +1,7 @@
 {% extends 'base.html' %}{% block content %}
-<h1>{{ t.forgot_title if mode == 'forgot' else t[mode] }}</h1>
+<h1 class="hero-title">{{ t.forgot_title if mode == 'forgot' else t[mode] }}</h1>
 {% if mode == 'forgot' %}<p class="lead">{{ t.forgot_help }}</p>
-{% else %}<p class="lead">{{ t.trial }}</p><p class="price">{{ t.price }}</p>{% endif %}
+{% else %}<p class="lead lead-offer">{{ t.trial }}</p>{% set p = t.price %}{% set key = 'Rs 299' if 'Rs 299' in p else ('299 روپے' if '299 روپے' in p else '') %}<p class="price price-offer">{% if key %}{% set parts = p.split(key, 1) %}{{ parts[0] }}<strong class="price-num">{{ key }}</strong>{{ parts[1] }}{% else %}{{ p }}{% endif %}</p>{% endif %}
 <form method="post" class="stack{% if mode == 'login' %} compact{% endif %}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 {% if mode == 'signup' %}
 <div class="field"><label for="name">{{ t.name }}</label><input id="name" name="name" autocomplete="name" maxlength="120" required enterkeyhint="next"><p class="hint">{{ t.hint_name }}</p></div>

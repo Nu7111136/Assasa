@@ -18,11 +18,11 @@
    already expired, Reset still leaves you on Upgrade; tell NZ. Simulation is only
    for this browser session and does not affect other testers or real billing.
 6. On Upgrade, allowlisted testers can tap **Pay Rs 299 (test)**. That is a virtual
-   payment: 30 days open and Rs 299 is added to NZ’s **test wallet** on Review
+   payment: one calendar month opens and Rs 299 is added to NZ’s **test wallet** on Review
    payments. No real JazzCash. To practise the live form, submit a unique fake TID
    such as `TEST-YOURINITIALS-001` (5-64 letters/digits/hyphens) and leave it pending.
    **Do NOT transfer money. Never share a JazzCash PIN, OTP, or receipt.** Ask NZ
-   before approving a live-looking TID: approval grants 30 days and Reset does not undo it.
+   before approving a live-looking TID: approval grants one calendar month and Reset does not undo it.
 7. Log out and log back in. On login, **Forgot password?** needs the signup phone
    plus the same CNIC; then set a new password. Report issues to NZ: phone/browser model, EN/Urdu,
    steps, expected vs actual result, and a screenshot without phone/CNIC/password/TID.
