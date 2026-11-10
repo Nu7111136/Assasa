@@ -1,10 +1,16 @@
 {% extends 'base.html' %}{% block content %}
-{% include '_tester_buttons.html' %}
-<h1>{{ t.dashboard }}</h1><p class="lead">{{ t.welcome }}, {{ user.name }}.</p>
 {% if paid %}
-<section class="trial"><h2>{{ t.paid_until_label }}</h2><p><bdi>{{ paid_end }}</bdi></p><p class="price">{{ t.paid_help }}</p></section>
+<section class="trial paid-top"><h2>{{ t.paid_until_label }}</h2><p><bdi>{{ paid_end }}</bdi></p><p class="price">{{ t.paid_help }}</p></section>
 {% else %}
-<section class="trial"><strong class="count">{{ days }}</strong><h2>{{ t.days }}</h2><p>{{ t.ends }}<br><bdi>{{ end }}</bdi></p>{% if not days %}<p>{{ t.expired }}</p>{% endif %}</section>
+<section class="trial paid-top"><strong class="count">{{ days }}</strong><h2>{{ t.days }}</h2><p>{{ t.ends }}<br><bdi>{{ end }}</bdi></p>{% if not days %}<p>{{ t.expired }}</p>{% endif %}</section>
 <p class="price">{{ t.price }}</p>
 {% endif %}
+{% include '_tester_buttons.html' %}
+<h1>{{ t.dashboard }}</h1><p class="lead">{{ t.welcome }}, {{ user.name }}.</p>
+<a class="stock-cta" href="{{ url_for('inventory') }}">
+<span class="stock-cta-kicker">{{ inv.notebook }}</span>
+<strong>{{ inv.open }}</strong>
+<span>{{ inv.open_help }}</span>
+{% if stock_low_n %}<span class="stock-cta-low">{{ stock_low_n }} · {{ inv.low }}</span>{% endif %}
+</a>
 <form action="/logout" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn-quiet">{{ t.logout }}</button></form>{% endblock %}

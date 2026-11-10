@@ -2,8 +2,8 @@
 
 Small Flask + SQLAlchemy server-rendered PWA, not a production identity platform.
 The latest signup brief supersedes the plan's earlier OTP-only onboarding: name,
-address, CNIC, phone, optional email and password; phone/password login. Forgot
-password uses that same phone plus CNIC (no email or SMS). Every new
+address, CNIC, phone, optional email and a 6-digit MPIN; phone + MPIN login. Forgot
+MPIN uses that same phone plus CNIC (no email or SMS). Every new
 account gets one server-recorded 120-hour trial. Price copy: Rs 299/month after
 five days, no automatic charge. Manual payment review is included; real gateway billing, inventory, OTP and
 tenant memberships remain outside this signup POC.
@@ -44,7 +44,8 @@ restart. Set one stable private random key on hosting. Never use an example key.
 ## Integrate
 
 - `main.py`: app factory, model, validation, login and trial calculation.
-- `templates/`: bilingual signup/login/dashboard; `TEXT` catalogs are in main.py.
+- `/stock`: shop notebook inventory (trial + paid). Trade picker, item cards, came-in / sold-or-used, running-low, most-used. No barcode or SKU.
+- `templates/`: bilingual signup/login/dashboard/stock; `TEXT` catalogs are in main.py.
 - `static/`: isolated navy/white UI, icons, manifest and service worker.
 - Import `create_app`, or register equivalent routes/models in your larger app.
   Avoid clashing route names; namespace routes, cookie and service-worker scope
@@ -52,7 +53,7 @@ restart. Set one stable private random key on hosting. Never use an example key.
 - User ID comes only from the signed session, not submitted dashboard IDs. Never
   use a phone or a CNIC as a tenant ID. Add business/membership tables and tenant
   authorization tests before integrating inventory.
-- Werkzeug scrypt password hashes, CSRF-protected POSTs (including logout), unique
+- Werkzeug scrypt hashes of a 6-digit MPIN, CSRF-protected POSTs (including logout), unique
   phone DB constraint and route rate limits. Rate limiting is per-process memory
   for the POC; configure shared Redis for multi-worker production.
 - Trial stored in UTC; dashboard shows PKT and ceiling days left, zero after expiry.
@@ -131,7 +132,7 @@ ADMIN_PHONES=
 
 Set `ADMIN_PHONES` to a comma-separated allowlist of **existing registered** phone
 numbers. No default admin account is created. These users must still log in with
-passwords. Visit `/admin/payments`, verify the funds in JazzCash, then approve or
+their 6-digit MPIN. Visit `/admin/payments`, verify the funds in JazzCash, then approve or
 reject. A TID is only a claim, never automatic proof of payment. Approval grants
 **one PKT calendar month** from approval time (same date next month; shorter
 months use the last day). A second approval while still paid stacks another

@@ -1,0 +1,109 @@
+{% extends 'base.html' %}{% block content %}
+<p class="admin-kicker">{{ 'Asasa office · Pakistan time' if lang=='en' else 'اثاثہ دفتر · پاکستان وقت' }}</p>
+<h1 class="hero-title">{{ 'How the shops are doing' if lang=='en' else 'دکانیں کیسی چل رہی ہیں' }}</h1>
+<p class="lead">{{ 'This page is only for you. Each shop sits in exactly one of the four boxes.' if lang=='en' else 'یہ صفحہ صرف آپ کے لیے ہے۔ ہر دکان ان چار خانوں میں سے ایک میں ہے۔' }}</p>
+
+<section class="admin-slabs" aria-label="{{ 'Shop counts' if lang=='en' else 'دکانوں کی گنتی' }}">
+<a class="admin-slab" href="#shops"><span class="n">{{ registered }}</span><h2>{{ 'Registered' if lang=='en' else 'رجسٹرڈ' }}</h2><p>{{ 'Every shop that signed up.' if lang=='en' else 'ہر وہ دکان جس نے اکاؤنٹ بنایا۔' }}</p></a>
+<a class="admin-slab" href="#shops"><span class="n">{{ buckets.active }}</span><h2>{{ 'Active' if lang=='en' else 'فعال' }}</h2><p>{{ 'Free trial still on, or this month is paid.' if lang=='en' else 'مفت آزمائش جاری ہے، یا اس مہینے کی ادائیگی ہو چکی ہے۔' }}</p></a>
+<a class="admin-slab warn" href="#shops"><span class="n">{{ buckets.left }}</span><h2>{{ 'Left membership' if lang=='en' else 'رکنیت چھوڑ دی' }}</h2><p>{{ 'Paid before. The month ended. They have not paid again.' if lang=='en' else 'پہلے ادا کیا۔ مہینہ ختم۔ دوبارہ ادا نہیں کیا۔' }}</p></a>
+<a class="admin-slab muted" href="#shops"><span class="n">{{ buckets.unpaid }}</span><h2>{{ 'Trial ended, never paid' if lang=='en' else 'آزمائش ختم، کبھی ادا نہیں' }}</h2><p>{{ 'Used the free days and never sent Rs 299.' if lang=='en' else 'مفت دن استعمال کیے، 299 روپے کبھی نہیں بھیجے۔' }}</p></a>
+</section>
+{% if pending_rows %}<p class="admin-next">{{ pending_rows|length }} {{ 'receipts are waiting. Open JazzCash, then Approve or Reject below.' if lang=='en' else 'رسیدیں منتظر ہیں۔ JazzCash کھولیں، پھر نیچے منظور یا مسترد کریں۔' }}</p>{% endif %}
+
+<section class="admin-card" id="money">
+<h2>{{ 'Money' if lang=='en' else 'رقم' }}</h2>
+<p class="lead">{{ 'This is Asasa’s Rs 299 month — not what a shop sold. Pick a time window.' if lang=='en' else 'یہ اثاثہ کے 299 روپے ماہانہ ہیں — دکان کی فروخت نہیں۔ وقت کا دائرہ چنیں۔' }}</p>
+<form class="admin-range" method="get" action="{{ url_for('admin_home') }}">
+<div class="admin-chips">{% for key, label, ur in (('month','This month','اس مہینے'),('3m','3 months','3 مہینے'),('6m','6 months','6 مہینے'),('12m','12 months','12 مہینے')) %}
+<a class="admin-chip{{ ' is-on' if range_kind==key }}" href="{{ url_for('admin_home', range=key) }}">{{ ur if lang=='ur' else label }}</a>
+{% endfor %}
+<a class="admin-chip{{ ' is-on' if range_kind=='custom' }}" href="#custom-dates">{{ 'Custom dates' if lang=='en' else 'اپنی تاریخیں' }}</a>
+</div>
+<p class="hint">{{ range_start }} → {{ range_end }}</p>
+<div class="admin-custom" id="custom-dates">
+<label for="from">{{ 'From' if lang=='en' else 'سے' }}</label>
+<input id="from" type="date" name="from" value="{{ date_from }}" lang="en" dir="ltr">
+<label for="to">{{ 'To' if lang=='en' else 'تک' }}</label>
+<input id="to" type="date" name="to" value="{{ date_to }}" lang="en" dir="ltr">
+<input type="hidden" name="range" value="custom">
+<button type="submit">{{ 'Show these dates' if lang=='en' else 'یہ تاریخیں دکھائیں' }}</button>
+</div>
+</form>
+<div class="admin-slabs money-slabs">
+<a class="admin-slab{{ ' warn' if money.n_pending }}" href="#pending"><span class="n">Rs {{ money.pending }}</span><h2>{{ 'Waiting for you' if lang=='en' else 'آپ کے انتظار میں' }}</h2><p>{{ money.n_pending }} {{ 'receipts not checked yet.' if lang=='en' else 'رسیدیں ابھی چیک نہیں۔' }}</p></a>
+<article class="admin-slab"><span class="n">Rs {{ money.live }}</span><h2>{{ 'Looks like real JazzCash' if lang=='en' else 'اصل JazzCash جیسی' }}</h2><p>{{ money.n_live }} {{ 'approved TIDs that are not test payments.' if lang=='en' else 'منظور TIDs جو ٹیسٹ نہیں۔' }}</p></article>
+<article class="admin-slab"><span class="n">Rs {{ money.test }}</span><h2>{{ 'Test money' if lang=='en' else 'ٹیسٹ رقم' }}</h2><p>{{ money.n_test }} {{ 'Pay Rs 299 (test) rows. Not in your JazzCash app.' if lang=='en' else 'ٹیسٹ ادائیگیاں۔ JazzCash ایپ میں نہیں۔' }}</p></article>
+</div>
+<p class="wallet">{{ 'All-time test wallet' if lang=='en' else 'کل ٹیسٹ والیٹ' }}: <strong>Rs {{ wallet }}</strong></p>
+<form method="post" action="{{ url_for('admin_recon') }}" class="recon">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="range" value="{{ range_kind }}">
+<input type="hidden" name="from" value="{{ date_from }}">
+<input type="hidden" name="to" value="{{ date_to }}">
+<label for="jazzcash_rs">{{ 'I opened JazzCash. The amount I saw for this window is' if lang=='en' else 'میں نے JazzCash کھولی۔ اس دائرے میں جو رقم دیکھی' }}</label>
+<div class="with-action"><input id="jazzcash_rs" name="jazzcash_rs" lang="en" inputmode="numeric" dir="ltr" pattern="[0-9]{1,9}" required placeholder="299" spellcheck="false"><button type="submit">{{ 'Save tick' if lang=='en' else 'ٹک محفوظ کریں' }}</button></div>
+<p class="hint">{{ 'Match this with “Looks like real JazzCash” above. Test money is separate on purpose.' if lang=='en' else 'اوپر “اصل JazzCash جیسی” سے ملا کر دیکھیں۔ ٹیسٹ رقم جان بوجھ کر الگ ہے۔' }}</p>
+{% if recon %}<p class="recon-last">{{ 'Last tick' if lang=='en' else 'آخری ٹک' }}: Rs {{ recon.jazzcash_rs }} · {{ pkt_label(recon.created_at) }}</p>{% endif %}
+</form>
+</section>
+
+<section class="admin-card" id="pending">
+<div class="admin-head"><h2>{{ 'Waiting for you' if lang=='en' else 'آپ کے انتظار میں' }}</h2>
+<a href="{{ url_for('admin_payments') }}">{{ 'Open full review' if lang=='en' else 'پوری فہرست کھولیں' }}</a></div>
+<p class="lead">{{ 'Open the JazzCash app. If the money is there, Approve. If it is not, Reject. Dummy TIDs are not real money.' if lang=='en' else 'JazzCash ایپ کھولیں۔ رقم ہو تو منظور کریں، نہ ہو تو مسترد۔ فرضی TID اصل رقم نہیں۔' }}</p>
+{% for p,u in pending_rows %}
+<article class="payment-card"><h2>{{ u.name }}</h2><p><bdi>{{ u.phone }}</bdi></p>
+<p>TID: <bdi>{{ p.tid }}</bdi> · Rs {{ p.amount }} · {{ pkt_label(p.created_at) }}</p>
+{% if is_test_tid(p.tid) %}<p class="badge badge-low">{{ 'Test' if lang=='en' else 'ٹیسٹ' }}</p>{% endif %}
+<div class="actions">{% for action in ('approve','reject') %}<form method="post" action="{{ url_for('review_payment', pid=p.id, action=action) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="next" value="office"><button{% if action=='reject' %} class="btn-quiet"{% endif %}>{{ {'approve':'منظور کریں','reject':'مسترد کریں'}[action] if lang=='ur' else action|title }}</button></form>{% endfor %}</div>
+</article>
+{% else %}<p class="vx-empty">{{ 'Nothing waiting. New TIDs from Upgrade land here.' if lang=='en' else 'کچھ منتظر نہیں۔ اپ گریڈ سے نئی TID یہاں آئیں گی۔' }}</p>{% endfor %}
+</section>
+
+<section class="admin-card" id="shops">
+<h2>{{ 'Every shop' if lang=='en' else 'ہر دکان' }}</h2>
+<div class="st-table-wrap">
+<table>
+<thead><tr><th>{{ 'Shop' if lang=='en' else 'دکان' }}</th><th>{{ 'Where they are' if lang=='en' else 'اب کہاں ہیں' }}</th><th>{{ 'Trial ends' if lang=='en' else 'آزمائش ختم' }}</th><th>{{ 'Paid until' if lang=='en' else 'ادائیگی کی میعاد' }}</th></tr></thead>
+<tbody>
+{% for s in shops %}
+<tr class="{{ 'row-low' if s.bucket=='left' else ('row-out' if s.bucket=='unpaid' else '') }}">
+<td><strong class="item-name">{{ s.name }}</strong><br><bdi>{{ s.phone }}</bdi></td>
+<td>{% if s.bucket=='active' %}{{ 'Active' if lang=='en' else 'فعال' }}
+{% elif s.bucket=='left' %}{{ 'Left membership' if lang=='en' else 'رکنیت چھوڑ دی' }}
+{% else %}{{ 'Trial ended, never paid' if lang=='en' else 'آزمائش ختم، کبھی ادا نہیں' }}{% endif %}</td>
+<td>{{ s.trial }}</td>
+<td>{{ s.paid or ('—' if lang=='en' else '—') }}</td>
+</tr>
+{% else %}
+<tr><td colspan="4">{{ 'No shops yet.' if lang=='en' else 'ابھی کوئی دکان نہیں۔' }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+
+<section class="admin-card">
+<h2>{{ 'Receipts in this window' if lang=='en' else 'اس دائرے کی رسیدیں' }}</h2>
+<div class="st-table-wrap">
+<table>
+<thead><tr><th>TID</th><th>{{ 'Shop' if lang=='en' else 'دکان' }}</th><th>{{ 'Kind' if lang=='en' else 'قسم' }}</th><th>{{ 'Status' if lang=='en' else 'حالت' }}</th><th>Rs</th><th>{{ 'Sent' if lang=='en' else 'جمع' }}</th></tr></thead>
+<tbody>
+{% for p,u in period_rows %}
+<tr>
+<td><bdi>{{ p.tid }}</bdi></td>
+<td>{{ u.name }}<br><bdi>{{ u.phone }}</bdi></td>
+<td>{% if is_test_tid(p.tid) %}{{ 'Test' if lang=='en' else 'ٹیسٹ' }}{% else %}{{ 'Live-looking' if lang=='en' else 'لائیو جیسی' }}{% endif %}</td>
+<td class="status-{{ p.status }}">{{ {'pending':'زیرِ جائزہ','approved':'منظور','rejected':'مسترد'}[p.status] if lang=='ur' else p.status }}</td>
+<td class="amount">{{ p.amount }}</td>
+<td>{{ pkt_label(p.created_at) }}</td>
+</tr>
+{% else %}
+<tr><td colspan="6">{{ 'No receipts in this window.' if lang=='en' else 'اس دائرے میں کوئی رسید نہیں۔' }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</section>
+{% endblock %}

@@ -23,25 +23,25 @@ The banner button **Upgrade Now** / **ابھی اپ گریڈ کریں** is a gol
 
 When the trial is over and the shop is unpaid, the banner must not say **Trial ended, pay to continue**. Keep **Upgrade Now** (gold) and the Upgrade page. Paid shops keep **Paid access active**. Active trials keep “N days left”.
 
-## 3. Admin portal (platform, not the shop)
+## 3. Admin portal (platform, not the shop) — **done**
 
-New admin home, still admin-only. Payments review stays.
+Admin-only home at `/admin` (**Asasa office** / **اثاثہ دفتر**). `/admin/payments` stays as the pending queue.
 
-Counts (PKT calendar):
+Counts (real PKT clock, not tester Next day):
 
 - **Registered** — every signup.
 - **Active** — trial still running **or** `paid_until` in the future.
 - **Left membership** — had paid access that has now expired (not people who only finished a free trial).
-- **Never paid / trial ended** — optional extra count, separate from “left”.
+- **Trial ended, never paid** — no `paid_until`, trial over.
 
 Payments board:
 
-- List: TID, amount, status, shop phone/name, submitted at, reviewed at.
-- Totals for **this month**, **3 months**, **6 months**, **year**, **custom from–to**.
-- Split: approved vs pending vs rejected; **test/simulated** (`TEST-SIM-…`) vs live-looking TIDs.
-- Reconciliation: Asasa approved total vs what you saw in JazzCash (manual tick for now). Test wallet stays visible until real JazzCash gateway exists.
+- List: TID, amount, status, shop phone/name, sent at (PKT).
+- Totals for **this month**, **3 months**, **6 months**, **12 months**, **custom from–to**.
+- Split: pending vs live-looking approved vs `TEST-SIM-…` test money. All-time test wallet stays on the page.
+- Reconciliation: type the amount you saw in JazzCash for that window (manual tick). Test money is kept separate on purpose.
 
-## 4. Inventory (core product, trial + paid)
+## 4. Inventory (core product, trial + paid) — **done**
 
 Built for people who count stock in a notebook.
 

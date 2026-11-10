@@ -1,0 +1,11 @@
+{% extends 'base.html' %}{% block content %}
+<p class="stock-kicker">{{ inv.notebook }}</p>
+<h1 class="hero-title">{{ inv.pick }}</h1>
+<p class="lead">{{ inv.pick_help }}</p>
+<form method="post" action="{{ url_for('inventory_trade') }}" class="trade-grid">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% for key in trades %}
+<button type="submit" name="trade" value="{{ key }}" class="trade-card">{{ inv[key] }}</button>
+{% endfor %}
+</form>
+{% endblock %}

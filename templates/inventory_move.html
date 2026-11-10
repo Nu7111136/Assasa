@@ -1,0 +1,16 @@
+{% extends 'base.html' %}{% block content %}
+<p class="stock-kicker">{{ item.name }} · {{ item.qty_label }} {{ inv[item.unit] }}</p>
+<h1 class="hero-title">{{ heading }}</h1>
+<form method="post" action="{{ url_for('stock_in' if kind=='in' else 'stock_out', iid=item.id) }}" class="stack">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="field"><label for="qty">{{ heading }}</label>
+<input id="qty" name="qty" class="qty mpin" lang="en" dir="ltr" inputmode="decimal" pattern="[0-9]{1,9}([.][0-9]{1,3})?" required autofocus>
+</div>
+<div class="stock-chips" role="group">
+{% for n in ('1','2','5','10') %}
+<button type="button" class="admin-chip qty-chip" data-qty="{{ n }}">{{ n }}</button>
+{% endfor %}
+</div>
+<button class="{{ 'btn-in' if kind=='in' else 'btn-out' }}">{{ inv.save_in if kind=='in' else inv.save_out }}</button>
+</form>
+{% endblock %}

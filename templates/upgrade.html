@@ -21,7 +21,7 @@
 <p class="notice">{{ 'Never enter a JazzCash PIN or OTP here. Do not pay again while your payment is pending.' if lang=='en' else 'یہاں JazzCash پن یا او ٹی پی ہرگز درج نہ کریں۔ زیرِ جائزہ ادائیگی دوبارہ نہ کریں۔' }}</p>
 <form method="post" class="stack"><input type="hidden" name="csrf_token" value="{{csrf_token()}}">
 <div class="field"><label for="tid">{{ 'JazzCash transaction ID (TID)' if lang=='en' else 'JazzCash ٹرانزیکشن آئی ڈی (TID)' }}</label>
-<input id="tid" name="tid" minlength="5" maxlength="64" pattern="[A-Za-z0-9-]{5,64}" dir="ltr" required autocomplete="off" enterkeyhint="done" placeholder="e.g. 123456789">
+<input id="tid" name="tid" lang="en" minlength="5" maxlength="64" pattern="[A-Za-z0-9-]{5,64}" dir="ltr" required autocomplete="off" enterkeyhint="done" placeholder="e.g. 123456789" spellcheck="false" autocapitalize="characters">
 <p class="hint">{{ t.hint_tid }}</p></div>
 <button>{{ 'Submit for review' if lang=='en' else 'جائزے کے لیے جمع کریں' }}</button></form>
 {% for p in payments %}<p class="payment-status status-{{p.status}}"><bdi>{{p.tid}}</bdi> · {{ {'pending':'زیرِ جائزہ','approved':'منظور','rejected':'مسترد'}[p.status] if lang=='ur' else p.status }}</p>{% endfor %}

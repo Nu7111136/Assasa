@@ -43,7 +43,7 @@
    Free-tier limits can change: review the plan screens and do not enable paid
    services or upgrades unless you intend to pay. Internet is needed for login/data.
 8. **Test safely.** This is a separate tester database, not a real billing launch.
-   Use fake CNIC/address details and test passwords; phone/email/CNIC are not verified.
+   Use fake CNIC/address details and a test-only 6-digit MPIN; phone/email/CNIC are not verified.
    Fake TIDs are test submissions, NOT proof of payment. Do not ask testers to send
    real money. Never approve a fake TID as a real payment. Approval changes the
    actual account in this test database and grants one calendar month; reset does not undo it.

@@ -25,9 +25,14 @@ def token(client, path='/'):
     return re.search(r'name="csrf_token" value="([^"]+)"', client.get(path).text).group(1)
 
 
+PIN = '135790'
+
+
 def signup(client, **changes):
-    data = dict(name='Demo User', address='Fictional street', cnic='12345-1234567-1', phone='03001234567', email='', password='test-password-123', csrf_token=token(client))
+    data = dict(name='Demo User', address='Fictional street', cnic='12345-1234567-1', phone='03001234567', email='', password=PIN, confirm=PIN, csrf_token=token(client))
     data.update(changes)
+    if 'password' in changes and 'confirm' not in changes:
+        data['confirm'] = changes['password']
     return client.post('/', data=data)
 
 
@@ -39,14 +44,14 @@ def test_signup_trial_password_and_dashboard(client, app):
         u = User.query.one()
         assert u.cnic == '1234512345671'
         assert u.email is None
-        assert u.password_hash != 'test-password-123'
+        assert u.password_hash != PIN
         end = u.trial_ends_at.replace(tzinfo=timezone.utc)
         assert before + timedelta(days=5) <= end <= now() + timedelta(days=5)
     assert 'Days left' in client.get('/dashboard').text
     assert 'PKT' in client.get('/dashboard').text
 
 
-@pytest.mark.parametrize('change', [dict(cnic='123'), dict(cnic='a'*13), dict(phone='123'),dict(phone='04001234567'), dict(email='broken'),dict(password='short'),dict(name=''),dict(address='')])
+@pytest.mark.parametrize('change', [dict(cnic='123'), dict(cnic='a'*13), dict(phone='123'),dict(phone='04001234567'), dict(email='broken'),dict(password='short'),dict(password='12345'),dict(password='1234567'),dict(name=''),dict(address=''),dict(confirm='000000')])
 def test_invalid(client, change):
     assert signup(client, **change).status_code == 400
 
@@ -65,7 +70,23 @@ def test_login_logout_and_protection(client):
     client.post('/logout', data={'csrf_token':token(client,'/login')})
     assert client.get('/dashboard').status_code == 302
     assert client.post('/login',data=dict(phone='03001234567',password='wrong',csrf_token=token(client,'/login'))).status_code == 401
-    assert client.post('/login',data=dict(phone='03001234567',password='test-password-123',csrf_token=token(client,'/login'))).status_code == 302
+    assert client.post('/login',data=dict(phone='03001234567',password='123456',csrf_token=token(client,'/login'))).status_code == 401
+    assert client.post('/login',data=dict(phone='03001234567',password=PIN,csrf_token=token(client,'/login'))).status_code == 302
+
+
+def test_old_password_hash_needs_mpin_reset(client, app):
+    from werkzeug.security import generate_password_hash
+    signup(client)
+    with app.app_context():
+        User.query.one().password_hash = generate_password_hash('old-password-123')
+        db.session.commit()
+    client.post('/logout', data={'csrf_token': token(client, '/login')})
+    assert client.post('/login', data=dict(
+        phone='03001234567', password='old-password-123',
+        csrf_token=token(client, '/login'))).status_code == 401
+    assert client.post('/login', data=dict(
+        phone='03001234567', password=PIN,
+        csrf_token=token(client, '/login'))).status_code == 401
 
 
 def test_expired(client, app):
@@ -87,27 +108,27 @@ def test_forgot_password_resets_with_phone_and_cnic(client, app):
     client.post('/logout', data={'csrf_token': token(client, '/login')})
     page = client.get('/forgot-password')
     assert page.status_code == 200
-    assert 'Forgot password' in client.get('/login').text
+    assert 'Forgot MPIN' in client.get('/login').text
     csrf = token(client, '/forgot-password')
     assert client.post('/forgot-password', data=dict(
-        phone='03001234567', cnic='12345-1234567-1', password='new-secret-99',
-        confirm='mismatch-secret', csrf_token=csrf)).status_code == 400
+        phone='03001234567', cnic='12345-1234567-1', password='246810',
+        confirm='111111', csrf_token=csrf)).status_code == 400
     assert client.post('/forgot-password', data=dict(
-        phone='03001234567', cnic='99999-9999999-9', password='new-secret-99',
-        confirm='new-secret-99', csrf_token=csrf)).status_code == 401
+        phone='03001234567', cnic='99999-9999999-9', password='246810',
+        confirm='246810', csrf_token=csrf)).status_code == 401
     assert client.post('/forgot-password', data=dict(
-        phone='03999999999', cnic='12345-1234567-1', password='new-secret-99',
-        confirm='new-secret-99', csrf_token=csrf)).status_code == 401
+        phone='03999999999', cnic='12345-1234567-1', password='246810',
+        confirm='246810', csrf_token=csrf)).status_code == 401
     ok = client.post('/forgot-password', data=dict(
-        phone='03001234567', cnic='1234512345671', password='new-secret-99',
-        confirm='new-secret-99', csrf_token=csrf))
+        phone='03001234567', cnic='1234512345671', password='246810',
+        confirm='246810', csrf_token=csrf))
     assert ok.status_code == 302 and ok.location.endswith('/login')
-    assert 'Password updated' in client.get('/login').text
+    assert 'MPIN updated' in client.get('/login').text
     assert client.post('/login', data=dict(
-        phone='03001234567', password='test-password-123',
+        phone='03001234567', password=PIN,
         csrf_token=token(client, '/login'))).status_code == 401
     assert client.post('/login', data=dict(
-        phone='03001234567', password='new-secret-99',
+        phone='03001234567', password='246810',
         csrf_token=token(client, '/login'))).status_code == 302
 
 
@@ -118,8 +139,8 @@ def test_forgot_password_works_when_trial_expired(client, app):
         db.session.commit()
     assert client.get('/dashboard').location.endswith('/upgrade')
     reset = client.post('/forgot-password', data=dict(
-        phone='03001234567', cnic='12345-1234567-1', password='after-expiry-1',
-        confirm='after-expiry-1', csrf_token=token(client, '/forgot-password')))
+        phone='03001234567', cnic='12345-1234567-1', password='111222',
+        confirm='111222', csrf_token=token(client, '/forgot-password')))
     assert reset.status_code == 302 and reset.location.endswith('/login')
 
 
@@ -129,6 +150,41 @@ def test_urdu_and_session(client):
     assert 'شناختی کارڈ' in r.text
     assert 'dir="ltr"' in r.text
     assert 'lang="ur"' in client.get('/login').text
+
+
+def test_keyboard_follows_screen_language(client):
+    en = client.get('/').text
+    assert 'id="ur-kb"' not in en
+    assert 'data-kb="ur"' not in en
+    assert 'id="name" name="name"' in en and 'lang="en"' in en
+    assert 'lang="en" inputmode="tel"' in en
+    login = client.get('/login').text
+    assert 'id="ur-kb"' not in login
+    assert 'id="password"' in login and 'lang="en"' in login
+    assert '>MPIN</label>' in login
+    assert 'class="mpin"' in login and 'inputmode="numeric"' in login
+    assert 'pattern="[0-9]{6}"' in login
+    assert 'id="confirm"' not in login
+
+    ur = client.get('/language/ur', follow_redirects=True).text
+    assert 'id="ur-kb"' in ur
+    assert 'data-kb="ur"' in ur
+    assert 'inputmode="none"' in ur
+    assert 'lang="ur" dir="rtl" inputmode="none" data-kb="ur"' in ur
+    assert 'lang="en" inputmode="tel"' in ur
+    assert 'id="cnic"' in ur and 'lang="en"' in ur
+    ur_login = client.get('/login').text
+    assert 'id="ur-kb"' in ur_login
+    assert 'data-kb="ur"' not in ur_login
+    assert 'id="password"' in ur_login and 'lang="en"' in ur_login
+    assert 'ایم پن' in ur_login
+    assert 'class="mpin"' in ur_login
+    client.get('/language/en?page=signup')
+    signup(client)
+    upgrade = client.get('/upgrade').text
+    assert 'id="tid"' in upgrade and 'lang="en"' in upgrade
+    assert 'id="ur-kb"' not in upgrade
+    assert 'data-kb="ur"' not in upgrade
 
 
 def test_back_button_and_field_help(client):
@@ -141,6 +197,11 @@ def test_back_button_and_field_help(client):
     assert 'Start with 03' in login
     assert 'Dashes appear automatically' in forgot
     assert 'data-toggle="password"' in login
+    assert '>MPIN</label>' in home and 'class="mpin"' in home
+    assert 'id="confirm"' in home and 'id="confirm"' in forgot
+    assert 'Six numbers, like JazzCash' in home
+    assert 'Forgot MPIN?' in login
+    assert 'Password' not in home and 'Password' not in login and 'Password' not in forgot
     ur = client.get('/language/ur?page=login', follow_redirects=True).text
     assert 'واپس' in ur
     assert 'Show' in login

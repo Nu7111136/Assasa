@@ -1,0 +1,28 @@
+{% extends 'base.html' %}{% block content %}
+<h1 class="hero-title">{{ heading }}</h1>
+<p class="lead">{{ inv.hint_name }}</p>
+<form method="post" class="stack">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="field"><label for="name">{{ inv.name }}</label>
+<input id="name" name="name" required maxlength="80" value="{{ form.get('name','') }}"{% if lang=='ur' %} lang="ur" dir="rtl" inputmode="none" data-kb="ur"{% else %} lang="en" dir="ltr" autocapitalize="words"{% endif %}>
+<p class="hint">{{ inv.hint_name }}</p></div>
+<div class="field"><label for="category">{{ inv.group }}</label>
+<input id="category" name="category" maxlength="40" value="{{ form.get('category','') }}"{% if lang=='ur' %} lang="ur" dir="rtl" inputmode="none" data-kb="ur"{% else %} lang="en" dir="ltr"{% endif %}>
+<p class="hint">{{ inv.hint_group }}</p></div>
+<div class="field"><label for="qty">{{ inv.qty }}</label>
+<input id="qty" name="qty" class="qty" lang="en" dir="ltr" inputmode="decimal" pattern="[0-9]{1,9}([.][0-9]{1,3})?" value="{{ form.get('qty','0') }}" required>
+</div>
+<div class="field"><label for="unit">{{ inv.unit }}</label>
+<select id="unit" name="unit">{% set current = form.get('unit', default_unit) %}
+{% for key in units %}<option value="{{ key }}"{{ ' selected' if key==current else '' }}>{{ inv[key] }}</option>{% endfor %}
+</select></div>
+<div class="field"><label for="min_qty">{{ inv.minq }}</label>
+<input id="min_qty" name="min_qty" class="qty" lang="en" dir="ltr" inputmode="decimal" pattern="[0-9]{1,9}([.][0-9]{1,3})?" value="{{ form.get('min_qty','2') }}" required>
+<p class="hint">{{ inv.hint_min }}</p></div>
+<div class="field"><label for="buy_rs">{{ inv.buy }}</label>
+<input id="buy_rs" name="buy_rs" lang="en" dir="ltr" inputmode="numeric" pattern="[0-9]{0,7}" value="{{ form.get('buy_rs','') }}"></div>
+<div class="field"><label for="sell_rs">{{ inv.sell }}</label>
+<input id="sell_rs" name="sell_rs" lang="en" dir="ltr" inputmode="numeric" pattern="[0-9]{0,7}" value="{{ form.get('sell_rs','') }}"></div>
+<button>{{ inv.save }}</button>
+</form>
+{% endblock %}

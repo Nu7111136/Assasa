@@ -1,0 +1,68 @@
+{% extends 'base.html' %}{% block content %}
+<p class="stock-kicker">{{ inv[item.unit] }}{% if item.category %} · {{ item.category }}{% endif %}</p>
+<h1 class="hero-title">{{ item.name }}</h1>
+<p class="stock-qty big"><bdi>{{ item.qty_label }}</bdi> <span>{{ inv[item.unit] }}</span></p>
+{% if item.status=='out' %}<p class="stock-badge out">{{ inv.empty }}</p>
+{% elif item.status=='low' %}<p class="stock-badge low">{{ inv.low }}</p>{% endif %}
+
+<div class="stock-btns">
+<form method="post" action="{{ url_for('stock_in', iid=item.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="qty" value="1">
+<button class="btn-in" type="submit">+ {{ inv.came }}</button>
+</form>
+<form method="post" action="{{ url_for('stock_out', iid=item.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="qty" value="1">
+<button class="btn-out" type="submit"{{ ' disabled' if item.status=='out' else '' }}>− {{ inv.went }}</button>
+</form>
+</div>
+<p class="stock-more">
+<a href="{{ url_for('stock_move', iid=item.id, kind='in') }}">{{ inv.other_in }}</a>
+ ·
+<a href="{{ url_for('stock_move', iid=item.id, kind='out') }}">{{ inv.other_out }}</a>
+</p>
+
+<form method="post" action="{{ url_for('stock_count', iid=item.id) }}" class="stack compact">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="field"><label for="count_qty">{{ inv.count }}</label>
+<input id="count_qty" name="qty" class="qty" lang="en" dir="ltr" inputmode="decimal" pattern="[0-9]{1,9}([.][0-9]{1,3})?" value="{{ item.qty_label }}" required>
+</div>
+<button>{{ inv.set_count }}</button>
+</form>
+
+<h2>{{ inv.save }}</h2>
+<form method="post" class="stack">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="field"><label for="name">{{ inv.name }}</label>
+<input id="name" name="name" required maxlength="80" value="{{ form.get('name', item.name) if form else item.name }}"{% if lang=='ur' %} lang="ur" dir="rtl" inputmode="none" data-kb="ur"{% else %} lang="en" dir="ltr" autocapitalize="words"{% endif %}></div>
+<div class="field"><label for="category">{{ inv.group }}</label>
+<input id="category" name="category" maxlength="40" value="{{ form.get('category', item.category or '') if form else (item.category or '') }}"{% if lang=='ur' %} lang="ur" dir="rtl" inputmode="none" data-kb="ur"{% else %} lang="en" dir="ltr"{% endif %}></div>
+<div class="field"><label for="unit">{{ inv.unit }}</label>
+<select id="unit" name="unit">{% set current = form.get('unit', item.unit) if form else item.unit %}
+{% for key in units %}<option value="{{ key }}"{{ ' selected' if key==current else '' }}>{{ inv[key] }}</option>{% endfor %}
+</select></div>
+<div class="field"><label for="min_qty">{{ inv.minq }}</label>
+<input id="min_qty" name="min_qty" class="qty" lang="en" dir="ltr" inputmode="decimal" value="{{ form.get('min_qty', item.min_label) if form else item.min_label }}" required>
+<p class="hint">{{ inv.hint_min }}</p></div>
+<div class="field"><label for="buy_rs">{{ inv.buy }}</label>
+<input id="buy_rs" name="buy_rs" lang="en" dir="ltr" inputmode="numeric" pattern="[0-9]{0,7}" value="{{ form.get('buy_rs', item.buy_rs or '') if form else (item.buy_rs or '') }}"></div>
+<div class="field"><label for="sell_rs">{{ inv.sell }}</label>
+<input id="sell_rs" name="sell_rs" lang="en" dir="ltr" inputmode="numeric" pattern="[0-9]{0,7}" value="{{ form.get('sell_rs', item.sell_rs or '') if form else (item.sell_rs or '') }}"></div>
+<button>{{ inv.save }}</button>
+</form>
+
+{% if moves %}
+<h2>{{ inv.recent }}</h2>
+<ul class="stock-moves">
+{% for m in moves %}
+<li><bdi>{{ m.after_label }}</bdi> ← {{ {'in': inv.came, 'out': inv.went, 'open': inv.added, 'set': inv.counted}[m.kind] }} {{ m.qty_label }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+<form method="post" action="{{ url_for('stock_remove', iid=item.id) }}" class="stock-remove" onsubmit="return confirm(this.dataset.ask)" data-ask="{{ inv.remove }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="btn-quiet">{{ inv.remove }}</button>
+</form>
+{% endblock %}

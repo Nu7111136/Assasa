@@ -1,0 +1,15 @@
+{% extends 'base.html' %}{% block content %}
+<h1 class="hero-title">{{ heading }}</h1>
+<p class="lead">{{ inv.stock_in_btn if kind=='in' else inv.stock_out_btn }}</p>
+{% if not items %}<p class="vx-empty">{{ inv.none }}</p>{% endif %}
+<ul class="stock-pick">
+{% for item in items %}
+<li>
+<a href="{{ url_for('stock_move', iid=item.id, kind=kind) }}">
+<strong>{{ item.name }}</strong>
+<span>{{ item.qty_label }} {{ item.unit_short }}{% if item.price_label != '—' %} · {{ item.price_label }}{% endif %}</span>
+</a>
+</li>
+{% endfor %}
+</ul>
+{% endblock %}

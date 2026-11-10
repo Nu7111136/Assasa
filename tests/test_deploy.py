@@ -2,7 +2,7 @@ from pathlib import Path
 import pytest
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.schema import CreateTable
-from main import User, Payment, database_uri
+from main import User, Payment, ReconNote, database_uri
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -24,7 +24,7 @@ def test_sqlite_url_unchanged():
 
 def test_postgresql_schema_compiles_and_migration_preserves_timezone():
     dialect = postgresql.dialect()
-    for model in (User, Payment):
+    for model in (User, Payment, ReconNote):
         ddl = str(CreateTable(model.__table__).compile(dialect=dialect))
         assert 'CREATE TABLE' in ddl and 'TIMESTAMP WITH TIME ZONE' in ddl
     assert User.__table__.c.paid_until.type.compile(dialect=dialect) == 'TIMESTAMP WITH TIME ZONE'

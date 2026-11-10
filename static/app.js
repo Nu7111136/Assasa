@@ -28,8 +28,213 @@ document.querySelectorAll('input,textarea').forEach((el) => {
   el.addEventListener('blur', () => { if (el.value) mark(el); });
 });
 
+function digits6(el) {
+  if (!el) return;
+  el.addEventListener('input', () => {
+    el.value = el.value.replace(/\D/g, '').slice(0, 6);
+    mark(el);
+  });
+}
+document.querySelectorAll('input.qty').forEach((el) => {
+  el.addEventListener('input', () => {
+    const raw = el.value.replace(/[^\d.]/g, '');
+    const parts = raw.split('.');
+    el.value = parts[0].slice(0, 9) + (parts.length > 1 ? '.' + parts.slice(1).join('').slice(0, 3) : '');
+    mark(el);
+  });
+});
+document.querySelectorAll('form.row-save').forEach((form) => {
+  if (form.closest('.stock-table')) return;
+  const id = form.id;
+  const fields = id
+    ? document.querySelectorAll(`[form="${id}"]`)
+    : form.querySelectorAll('input,select');
+  fields.forEach((el) => {
+    const eventName = el.tagName === 'SELECT' ? 'change' : 'blur';
+    el.addEventListener(eventName, () => {
+      if (typeof form.requestSubmit === 'function') form.requestSubmit();
+      else form.submit();
+    });
+  });
+});
+
+(function stockGrid() {
+  const table = document.querySelector('.stock-table');
+  if (!table) return;
+  const menu = document.getElementById('type-menu');
+  let menuRow = null;
+
+  function post(url, data) {
+    const body = new FormData();
+    Object.keys(data).forEach((key) => body.append(key, data[key]));
+    return fetch(url, {
+      method: 'POST',
+      body,
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'fetch' },
+    }).then((res) => {
+      const type = res.headers.get('content-type') || '';
+      if (type.indexOf('application/json') !== -1) return res.json();
+      if (res.redirected) {
+        window.location.href = res.url;
+        return null;
+      }
+      return { ok: false };
+    });
+  }
+
+  function fields(tr) {
+    const csrf = tr.querySelector('[name="csrf_token"]');
+    const name = tr.querySelector('.cell-name');
+    const unit = tr.querySelector('input[name="unit"]');
+    const price = tr.querySelector('.cell-price');
+    return {
+      csrf_token: csrf ? csrf.value : '',
+      quiet: '1',
+      name: name ? name.value : '',
+      unit: unit ? unit.value : '',
+      sell_rs: price ? price.value : '',
+    };
+  }
+
+  function paint(tr, data) {
+    if (!data || !data.ok) return;
+    tr.classList.remove('is-ok', 'is-low', 'is-out');
+    tr.classList.add('is-' + data.status);
+    const qty = tr.querySelector('.cell-qty');
+    if (qty) qty.textContent = data.qty;
+    const minus = tr.querySelector('.step-btn.minus');
+    if (minus) minus.disabled = data.status === 'out';
+    const typeBtn = tr.querySelector('.cell-type');
+    if (typeBtn && data.unit_label) typeBtn.textContent = data.unit_label;
+    const unit = tr.querySelector('input[name="unit"]');
+    if (unit && data.unit) unit.value = data.unit;
+    const price = tr.querySelector('.cell-price');
+    if (price && data.price != null) price.value = data.price;
+  }
+
+  table.querySelectorAll('.step-form').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const tr = form.closest('tr');
+      const btn = form.querySelector('button');
+      if (!tr || (btn && btn.disabled)) return;
+      const data = fields(tr);
+      data.qty = '1';
+      post(form.getAttribute('action'), data).then((res) => paint(tr, res));
+    });
+  });
+
+  table.querySelectorAll('.cell-name, .cell-price').forEach((input) => {
+    input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        input.blur();
+      }
+    });
+    input.addEventListener('blur', () => {
+      const tr = input.closest('tr');
+      const form = tr && tr.querySelector('form.row-save');
+      if (!form) return;
+      post(form.getAttribute('action'), fields(tr)).then((res) => paint(tr, res));
+    });
+  });
+  table.querySelectorAll('.cell-price').forEach((el) => {
+    el.addEventListener('input', () => {
+      el.value = el.value.replace(/\D/g, '').slice(0, 7);
+    });
+  });
+
+  function closeMenu() {
+    if (!menu) return;
+    menu.hidden = true;
+    menuRow = null;
+    document.body.classList.remove('menu-open');
+    table.querySelectorAll('.cell-type[aria-expanded="true"]').forEach((btn) => {
+      btn.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function placeMenu(btn) {
+    const box = btn.getBoundingClientRect();
+    const width = Math.max(box.width, 148);
+    menu.style.width = width + 'px';
+    let left = box.left;
+    if (left + width > window.innerWidth - 8) left = window.innerWidth - width - 8;
+    if (left < 8) left = 8;
+    menu.style.left = left + 'px';
+    const gap = 6;
+    if (window.innerHeight - box.bottom < 220) {
+      menu.style.top = 'auto';
+      menu.style.bottom = (window.innerHeight - box.top + gap) + 'px';
+    } else {
+      menu.style.bottom = 'auto';
+      menu.style.top = (box.bottom + gap) + 'px';
+    }
+  }
+
+  table.querySelectorAll('.cell-type').forEach((btn) => {
+    btn.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const tr = btn.closest('tr');
+      if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      if (menuRow === tr) {
+        closeMenu();
+        return;
+      }
+      closeMenu();
+      menuRow = tr;
+      btn.setAttribute('aria-expanded', 'true');
+      const current = tr.querySelector('input[name="unit"]');
+      const unit = current ? current.value : '';
+      menu.querySelectorAll('.type-opt').forEach((opt) => {
+        const on = opt.getAttribute('data-unit') === unit;
+        opt.classList.toggle('is-on', on);
+        opt.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      menu.hidden = false;
+      document.body.classList.add('menu-open');
+      placeMenu(btn);
+    });
+  });
+
+  if (menu) {
+    menu.addEventListener('click', (event) => {
+      const pick = event.target.closest('[data-unit]');
+      if (!pick || !menuRow) return;
+      const hidden = menuRow.querySelector('input[name="unit"]');
+      const typeBtn = menuRow.querySelector('.cell-type');
+      const form = menuRow.querySelector('form.row-save');
+      hidden.value = pick.getAttribute('data-unit');
+      typeBtn.textContent = pick.textContent.trim();
+      post(form.getAttribute('action'), fields(menuRow)).then((res) => paint(menuRow, res));
+      closeMenu();
+    });
+  }
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!menu || menu.hidden) return;
+    if (menu.contains(event.target)) return;
+    if (event.target.closest && event.target.closest('.cell-type')) return;
+    closeMenu();
+  });
+})();
+
+document.querySelectorAll('.qty-chip').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const input = document.getElementById('qty');
+    if (!input) return;
+    input.value = btn.getAttribute('data-qty');
+    input.dispatchEvent(new Event('input'));
+    mark(input);
+  });
+});
+
 const password = document.getElementById('password');
 const confirm = document.getElementById('confirm');
+digits6(password);
+digits6(confirm);
 if (password && confirm) {
   const sync = () => {
     confirm.setCustomValidity(confirm.value && confirm.value !== password.value ? 'mismatch' : '');
@@ -86,3 +291,174 @@ document.querySelectorAll('[data-copy]').forEach((box) => {
 });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+
+(function urduKeyboard() {
+  const kb = document.getElementById('ur-kb');
+  if (!kb || document.documentElement.lang !== 'ur') return;
+
+  const LETTERS = [
+    ['ق', 'و', 'ع', 'ر', 'ت', 'ے', 'ء', 'ی', 'ہ', 'پ'],
+    ['ا', 'س', 'د', 'ف', 'گ', 'ھ', 'ج', 'ک', 'ل'],
+    ['shift', 'ز', 'ش', 'چ', 'ط', 'ب', 'ن', 'م', 'back'],
+    ['123', 'comma', 'space', 'dot', 'done'],
+  ];
+  const SHIFT = [
+    ['آ', 'ؤ', 'ئ', 'ں', 'ڑ', 'ٹ', 'ڈ', 'ژ', 'ۃ'],
+    ['ص', 'ض', 'ث', 'ظ', 'ة', 'ۂ', 'ۓ'],
+    ['shift', 'ز', 'ش', 'چ', 'ط', 'ب', 'ن', 'م', 'back'],
+    ['123', 'comma', 'space', 'dot', 'done'],
+  ];
+  const NUMS = [
+    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0'],
+    ['-', '/', ':', '،', '.', '(', ')', '؟', '!'],
+    ['abc', 'space', 'back', 'done'],
+  ];
+
+  let layer = 'letters';
+  let shifted = false;
+  let active = null;
+
+  function rows() {
+    if (layer === 'nums') return NUMS;
+    return shifted ? SHIFT : LETTERS;
+  }
+
+  function label(key) {
+    if (key === 'shift') return shifted ? 'ا' : 'آ ں';
+    if (key === 'back') return '⌫';
+    if (key === 'space') return 'خالی جگہ';
+    if (key === 'done') return 'ہو گیا';
+    if (key === '123') return '123';
+    if (key === 'abc') return 'ا ب';
+    if (key === 'comma') return '،';
+    if (key === 'dot') return '.';
+    return key;
+  }
+
+  function paint() {
+    kb.innerHTML = '';
+    rows().forEach((row) => {
+      const line = document.createElement('div');
+      line.className = 'ur-kb-row';
+      row.forEach((key) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = label(key);
+        btn.dataset.key = key;
+        if (['shift', 'back', '123', 'abc', 'done', 'space'].includes(key)) btn.classList.add('is-act');
+        if (key === 'space') btn.classList.add('is-space');
+        if (key === 'done') btn.classList.add('is-done');
+        if (key === 'shift' && shifted) btn.classList.add('is-on');
+        line.appendChild(btn);
+      });
+      kb.appendChild(line);
+    });
+  }
+
+  function caret(el) {
+    const start = el.selectionStart == null ? el.value.length : el.selectionStart;
+    const end = el.selectionEnd == null ? el.value.length : el.selectionEnd;
+    return [start, end];
+  }
+
+  function write(el, next, pos) {
+    el.value = next;
+    if (el.setSelectionRange) el.setSelectionRange(pos, pos);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function insert(ch) {
+    if (!active) return;
+    const [start, end] = caret(active);
+    write(active, active.value.slice(0, start) + ch + active.value.slice(end), start + ch.length);
+  }
+
+  function backspace() {
+    if (!active) return;
+    const [start, end] = caret(active);
+    if (start !== end) {
+      write(active, active.value.slice(0, start) + active.value.slice(end), start);
+      return;
+    }
+    if (start === 0) return;
+    write(active, active.value.slice(0, start - 1) + active.value.slice(end), start - 1);
+  }
+
+  function open(el) {
+    active = el;
+    kb.hidden = false;
+    document.body.classList.add('kb-open');
+    paint();
+    requestAnimationFrame(() => {
+      document.body.style.setProperty('--kb-pad', kb.offsetHeight + 'px');
+      const row = el.closest('tr');
+      if (row && row.scrollIntoView) row.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    });
+  }
+
+  function close() {
+    kb.hidden = true;
+    document.body.classList.remove('kb-open');
+    document.body.style.removeProperty('--kb-pad');
+    active = null;
+    shifted = false;
+    layer = 'letters';
+  }
+
+  paint();
+  kb.addEventListener('pointerdown', (event) => event.preventDefault());
+  kb.addEventListener('click', (event) => {
+    const btn = event.target.closest('button');
+    if (!btn) return;
+    const key = btn.dataset.key;
+    if (key === 'shift') {
+      shifted = !shifted;
+      layer = 'letters';
+      paint();
+      return;
+    }
+    if (key === '123') {
+      layer = 'nums';
+      shifted = false;
+      paint();
+      return;
+    }
+    if (key === 'abc') {
+      layer = 'letters';
+      paint();
+      return;
+    }
+    if (key === 'back') {
+      backspace();
+      return;
+    }
+    if (key === 'done') {
+      close();
+      return;
+    }
+    insert(key === 'space' ? ' ' : key === 'comma' ? '،' : key === 'dot' ? '.' : key);
+    if (shifted && layer === 'letters') {
+      shifted = false;
+      paint();
+    }
+  });
+
+  document.addEventListener('focusin', (event) => {
+    if (event.target.matches && event.target.matches('[data-kb="ur"]')) open(event.target);
+    else if (!kb.contains(event.target)) close();
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (event.target.closest && event.target.closest('[data-kb="ur"]')) {
+      const field = event.target.closest('[data-kb="ur"]');
+      if (kb.hidden) open(field);
+      return;
+    }
+    if (kb.hidden) return;
+    if (kb.contains(event.target)) return;
+    const field = active;
+    close();
+    if (field && event.target !== field) {
+      window.setTimeout(() => { if (document.activeElement === field) field.blur(); }, 0);
+    }
+  }, true);
+})();

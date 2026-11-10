@@ -1,0 +1,68 @@
+{% extends 'base.html' %}{% block content %}
+<p class="stock-shop">{{ shop.name }}{% if shop.address %}<span> · {{ shop.address }}</span>{% endif %}</p>
+<h1 class="hero-title">{{ inv.title }}</h1>
+
+<div class="stock-table-wrap">
+<table class="stock-table">
+<thead>
+<tr>
+<th>{{ inv.col_item }}</th>
+<th>{{ inv.col_type }}</th>
+<th>{{ inv.col_qty }}</th>
+<th>{{ inv.col_price }}</th>
+</tr>
+</thead>
+<tbody>
+{% for item in items %}
+<tr id="row-{{ item.id }}" class="is-{{ item.status }}{{ ' is-focus' if focus_id==item.id }}">
+<td>
+<form id="save-{{ item.id }}" method="post" action="{{ url_for('stock_row', iid=item.id) }}" class="row-save">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="quiet" value="1">
+</form>
+<input form="save-{{ item.id }}" name="name" maxlength="80" class="cell-name" autocomplete="off" placeholder="{{ inv.name }}" value="{{ '' if item.name==inv.new_row else item.name }}"{% if focus_id==item.id %} autofocus{% endif %}{% if lang=='ur' %} lang="ur" dir="rtl" inputmode="none" data-kb="ur"{% else %} lang="en" dir="ltr" autocapitalize="words"{% endif %}>
+</td>
+<td class="stock-type-cell">
+<input type="hidden" form="save-{{ item.id }}" name="unit" value="{{ item.unit }}">
+<button type="button" class="cell-type" aria-haspopup="listbox" aria-expanded="false">{{ inv[item.unit] }}</button>
+</td>
+<td class="stock-qty-cell">
+<div class="stock-step">
+<form method="post" action="{{ url_for('stock_out', iid=item.id) }}" class="step-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="qty" value="1">
+<input type="hidden" name="quiet" value="1">
+<button type="submit" class="step-btn minus" aria-label="−"{{ ' disabled' if item.status=='out' else '' }}>−</button>
+</form>
+<span class="cell-qty" lang="en" dir="ltr">{{ item.qty_label }}</span>
+<form method="post" action="{{ url_for('stock_in', iid=item.id) }}" class="step-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="qty" value="1">
+<input type="hidden" name="quiet" value="1">
+<button type="submit" class="step-btn plus" aria-label="+">+</button>
+</form>
+</div>
+</td>
+<td class="stock-price-cell">
+<label class="price-wrap"><span class="rs-prefix">{{ inv.rs }}</span>
+<input form="save-{{ item.id }}" name="sell_rs" class="cell-price" lang="en" dir="ltr" inputmode="numeric" pattern="[0-9]{0,7}" maxlength="7" value="{{ item.sell_rs or '' }}" placeholder="0" aria-label="{{ inv.col_price }}">
+</label>
+</td>
+</tr>
+{% else %}
+<tr class="stock-empty"><td colspan="4">{{ empty }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+
+<form method="post" action="{{ url_for('inventory_new') }}" class="stock-add-btn">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="blank" value="1">
+<button type="submit" class="act-add">+ {{ inv.add }}</button>
+</form>
+
+<div id="type-menu" class="type-menu" hidden role="listbox">
+{% for key in units %}<button type="button" role="option" class="type-opt" data-unit="{{ key }}">{{ inv[key] }}</button>{% endfor %}
+</div>
+{% endblock %}

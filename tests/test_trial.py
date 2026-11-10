@@ -239,7 +239,7 @@ def test_expired_redirects_and_upgrade_controls(client,app):
     for n in range(1,7):
         response=step(client)
         assert response.location.endswith('/upgrade' if n>=5 else '/dashboard')
-    for path in ('/dashboard','/','/missing','/admin/payments'):
+    for path in ('/dashboard','/','/missing','/admin/payments','/stock'):
         response=client.get(path)
         assert response.status_code==302 and response.location.endswith('/upgrade')
     upgrade=client.get('/upgrade')
