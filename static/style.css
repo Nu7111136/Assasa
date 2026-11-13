@@ -248,7 +248,7 @@ background:linear-gradient(160deg,#F7E7BF,#D9B56A 70%);-webkit-background-clip:t
 [dir=rtl] .price-offer{font-size:15.5px;line-height:1.9}
 [dir=rtl] .price-num{font-family:'Playfair Display','Noto Naskh Arabic',serif;font-size:25px;line-height:1.5}
 
-/* Asasa office — KPI slabs (Vibess/Serenequtech), date bar (Navtraq), PKT tables. */
+/* Rakhza office — KPI slabs (Vibess/Serenequtech), date bar (Navtraq), PKT tables. */
 .admin-kicker{margin:0 0 8px;font-size:12px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
 .admin-kicker a{font-weight:600;text-decoration:none}
 .admin-sheet .lead{max-width:62ch;margin:0 0 22px}

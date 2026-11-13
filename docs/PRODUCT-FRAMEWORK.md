@@ -1,4 +1,4 @@
-# Asasa product framework
+# Rakhza product framework
 
 Audience: small shopkeepers in Pakistan who have no POS and no digital inventory (food stalls, cloth shops, plumbers, carpenters, kiryana, tailors). The app must stay simple: large buttons, EN/Urdu, no jargon.
 
@@ -25,7 +25,7 @@ When the trial is over and the shop is unpaid, the banner must not say **Trial e
 
 ## 3. Admin portal (platform, not the shop) — **done**
 
-Admin-only home at `/admin` (**Asasa office** / **اثاثہ دفتر**). `/admin/payments` stays as the pending queue.
+Admin-only home at `/admin` (**Rakhza office** / **رکھزا دفتر**). `/admin/payments` stays as the pending queue.
 
 Counts (real PKT clock, not tester Next day):
 
@@ -64,8 +64,8 @@ If `paid_until` is in the future: track jobs/orders (customer name/phone, what t
 ## Decisions
 
 - Inventory is the product; billing is the gate; admin is your control room.
-- Keep Flask + SQLAlchemy, bilingual PWA, JazzCash receive number in env.
-- Virtual **Pay Rs 299 (test)** stays for Render until JazzCash Payment Gateway keys exist.
+- Keep Flask + SQLAlchemy, bilingual PWA, JazzCash receive number in the vault.
+- Virtual **Pay Rs 299 (test)** stays on staging until JazzCash Payment Gateway live keys exist.
 - JazzCash hosted checkout is a later billing slice, not mixed into inventory.
 
 ## Later (not in 1–5)

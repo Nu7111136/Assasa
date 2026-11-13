@@ -64,12 +64,12 @@ document.querySelectorAll('form.row-save').forEach((form) => {
   });
 });
 
-function asasaSound(kind) {
+function rakhzaSound(kind) {
   try {
     const Ctx = window.AudioContext || window.webkitAudioContext;
     if (!Ctx) return;
-    const ctx = asasaSound.ctx || new Ctx();
-    asasaSound.ctx = ctx;
+    const ctx = rakhzaSound.ctx || new Ctx();
+    rakhzaSound.ctx = ctx;
     if (ctx.state === 'suspended') ctx.resume();
     const now = ctx.currentTime;
     const osc = ctx.createOscillator();
@@ -99,19 +99,19 @@ function asasaSound(kind) {
 (function stockSounds() {
   let pending = null;
   try {
-    pending = sessionStorage.getItem('asasa-sound');
-    if (pending) sessionStorage.removeItem('asasa-sound');
+    pending = sessionStorage.getItem('rakhza-sound');
+    if (pending) sessionStorage.removeItem('rakhza-sound');
   } catch (err) {}
   function flush() {
     if (!pending) return;
-    asasaSound(pending);
+    rakhzaSound(pending);
     pending = null;
   }
   flush();
   document.addEventListener('pointerdown', flush, { once: true });
   document.querySelectorAll('form.stock-add-btn').forEach((form) => {
     form.addEventListener('submit', () => {
-      try { sessionStorage.setItem('asasa-sound', 'add'); } catch (err) {}
+      try { sessionStorage.setItem('rakhza-sound', 'add'); } catch (err) {}
     });
   });
   document.querySelectorAll('form.nb-del-form').forEach((form) => {
@@ -121,7 +121,7 @@ function asasaSound(kind) {
         event.preventDefault();
         return;
       }
-      try { sessionStorage.setItem('asasa-sound', 'del'); } catch (err) {}
+      try { sessionStorage.setItem('rakhza-sound', 'del'); } catch (err) {}
     });
   });
 })();
@@ -270,7 +270,7 @@ function asasaSound(kind) {
       const csrf = form.querySelector('[name="csrf_token"]');
       post(form.getAttribute('action'), { csrf_token: csrf ? csrf.value : '', quiet: '1' }).then((res) => {
         if (!res || !res.ok || !tr) return;
-        asasaSound('del');
+        rakhzaSound('del');
         tr.remove();
       });
     });

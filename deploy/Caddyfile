@@ -1,0 +1,25 @@
+{
+	email {$CADDY_EMAIL}
+}
+
+rakhza.digital, www.rakhza.digital {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+	}
+	reverse_proxy web_prod:8000
+}
+
+staging.rakhza.digital {
+	encode gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+	}
+	reverse_proxy web_staging:8000
+}

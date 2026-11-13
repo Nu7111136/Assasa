@@ -1,0 +1,87 @@
+name: rakhza
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CADDY_EMAIL: ${CADDY_EMAIL}
+    env_file:
+      - .env.prod
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web_prod
+      - web_staging
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rakhza
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: rakhza
+    env_file:
+      - .env.prod
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./deploy/postgres/init-staging.sh:/docker-entrypoint-initdb.d/10-staging.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rakhza -d rakhza"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}"]
+    env_file:
+      - .env.prod
+    volumes:
+      - redis_data:/data
+
+  web_prod:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      DATABASE_URL: postgresql+psycopg://rakhza:${POSTGRES_PASSWORD}@db:5432/rakhza
+      RATELIMIT_STORAGE_URI: redis://:${REDIS_PASSWORD}@redis:6379/0
+      COOKIE_SECURE: "1"
+      APP_ENV: production
+      WEB_WORKERS: "2"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  web_staging:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    environment:
+      DATABASE_URL: postgresql+psycopg://rakhza:${POSTGRES_PASSWORD}@db:5432/rakhza_staging
+      RATELIMIT_STORAGE_URI: redis://:${REDIS_PASSWORD}@redis:6379/1
+      COOKIE_SECURE: "1"
+      APP_ENV: staging
+      WEB_WORKERS: "1"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+volumes:
+  pg_data:
+  redis_data:
+  caddy_data:
+  caddy_config:

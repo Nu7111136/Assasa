@@ -1,8 +1,8 @@
-# Asasa tester guide / اثاثہ ٹیسٹر گائیڈ
+# Rakhza tester guide / رکھزا ٹیسٹر گائیڈ
 
 ## English
-1. Open the HTTPS link NZ sends you. First load may take 30-50 seconds or longer
-   because free hosting sleeps. Wait, then refresh once. Internet is required.
+1. Open the HTTPS link NZ sends you (staging is https://staging.rakhza.digital).
+   Internet is required.
 2. Optional install: **Android Chrome:** menu (?) > Add to Home screen / Install
    app. **iPhone Safari:** Share > Add to Home Screen > Add. If the install option
    is absent, use the browser link normally.
@@ -23,13 +23,13 @@
    **Do NOT transfer money. Never share a JazzCash PIN, OTP, or receipt.** Ask NZ
    before approving a live-looking TID: approval grants one calendar month and Reset does not undo it.
 7. Log out and log back in. On login, **Forgot MPIN?** needs the signup phone
-   Asasa office. Report issues to NZ: phone/browser model, EN/Urdu,
+   Rakhza office. Report issues to NZ: phone/browser model, EN/Urdu,
    steps, expected vs actual result, and a screenshot without phone/CNIC/MPIN/TID.
 
 
 ## اردو
-1. NZ کا بھیجا ہوا HTTPS لنک کھولیں۔ مفت ہوسٹنگ کی وجہ سے پہلی بار 30 سے 50 سیکنڈ
-   یا زیادہ لگ سکتے ہیں۔ انتظار کریں، پھر ایک بار ریفریش کریں۔ انٹرنیٹ ضروری ہے۔
+1. NZ کا بھیجا ہوا HTTPS لنک کھولیں (staging: https://staging.rakhza.digital)۔
+   انٹرنیٹ ضروری ہے۔
 2. فون پر شامل کرنا اختیاری ہے: **Android Chrome:** مینو (⋮) > Add to Home screen
    یا Install app۔ **iPhone Safari:** Share > Add to Home Screen > Add۔ یہ آپشن
    نہ ملے تو براؤزر میں لنک استعمال کریں۔

@@ -15,7 +15,7 @@ def test_neon_database_url_preserves_credentials_and_ssl(prefix):
 
 @pytest.mark.parametrize('value', [None, '', '   '])
 def test_empty_database_url_falls_back_to_sqlite(value):
-    assert database_uri(value) == 'sqlite:///asasa.db'
+    assert database_uri(value) == 'sqlite:///rakhza.db'
 
 
 def test_sqlite_url_unchanged():
@@ -51,6 +51,31 @@ def test_upgrade_db_new_sqlite_is_idempotent(app):
     runner=app.test_cli_runner()
     assert runner.invoke(args=['upgrade-db']).exit_code == 0
     assert runner.invoke(args=['upgrade-db']).exit_code == 0
+
+
+def test_vps_compose_and_caddy_use_rakhza_digital():
+    compose = (ROOT / 'compose.yaml').read_text(encoding='utf-8')
+    caddy = (ROOT / 'deploy' / 'Caddyfile').read_text(encoding='utf-8')
+    assert 'web_prod' in compose and 'web_staging' in compose
+    assert 'rakhza_staging' in compose
+    assert 'rakhza.digital' in caddy and 'staging.rakhza.digital' in caddy
+    dockerfile = (ROOT / 'Dockerfile').read_text(encoding='utf-8')
+    assert 'gunicorn wsgi:app' in dockerfile
+    vault_example = (ROOT / 'secrets' / 'rakhza.env.example').read_text(encoding='utf-8')
+    assert 'PAYMENT_JAZZCASH_NUMBER' in vault_example
+    assert 'JAZZCASH_MERCHANT_ID' in vault_example
+
+
+def test_cicd_jobs_deploy_staging_then_manual_prod():
+    staging = (ROOT / '.github' / 'workflows' / 'deploy-staging.yml').read_text(encoding='utf-8')
+    prod = (ROOT / '.github' / 'workflows' / 'deploy-production.yml').read_text(encoding='utf-8')
+    update = (ROOT / 'deploy' / 'update.sh').read_text(encoding='utf-8')
+    assert 'update.sh staging' in staging
+    assert "branches: [main]" in staging
+    assert 'workflow_dispatch' in prod
+    assert 'update.sh production' in prod
+    assert 'web_staging' in update and 'web_prod' in update
+    assert 'secrets/rakhza.env' in staging
 
 
 def test_tester_guide_contains_real_urdu_not_encoding_placeholders():

@@ -112,7 +112,7 @@ def test_office_counts_money_window_recon_and_language(client, app):
     assert office.status_code == 200
     text = office.text
     assert 'How the shops are doing' in text
-    assert 'Asasa office' in text
+    assert 'Rakhza office' in text
     assert '<span class="n">4</span>' in text
     assert 'Left Shop' in text and 'Left membership' in text
     assert 'Never Paid' in text and 'Trial ended, never paid' in text
@@ -153,7 +153,7 @@ def test_office_counts_money_window_recon_and_language(client, app):
 
     ur = client.get('/language/ur?page=admin_home', follow_redirects=True)
     assert ur.status_code == 200
-    assert 'اثاثہ دفتر' in ur.text
+    assert 'رکھزا دفتر' in ur.text
     assert 'رجسٹرڈ' in ur.text
     assert 'رکنیت چھوڑ دی' in ur.text
 

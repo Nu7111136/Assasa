@@ -123,7 +123,7 @@ def test_forgot_password_points_to_office(client, app):
     page = client.get('/forgot-password')
     assert page.status_code == 200
     assert 'Forgot MPIN' in client.get('/login').text
-    assert 'Asasa office will set a new MPIN' in page.text
+    assert 'Rakhza office will set a new MPIN' in page.text
     assert 'id="cnic"' not in page.text
     assert 'id="password"' not in page.text
     assert client.post('/forgot-password').status_code == 405
@@ -140,7 +140,7 @@ def test_forgot_password_works_when_trial_expired(client, app):
     assert client.get('/dashboard').location.endswith('/upgrade')
     page = client.get('/forgot-password')
     assert page.status_code == 200
-    assert 'Asasa office will set a new MPIN' in page.text
+    assert 'Rakhza office will set a new MPIN' in page.text
 
 
 def test_urdu_and_session(client):
@@ -197,7 +197,7 @@ def test_back_button_and_field_help(client):
     assert 'id="back-btn"' in login and 'Back' in login
     assert 'id="back-btn"' in forgot
     assert 'Start with 03' in login
-    assert 'Asasa office will set a new MPIN' in forgot
+    assert 'Rakhza office will set a new MPIN' in forgot
     assert 'data-toggle="password"' in login
     assert '>MPIN</label>' in home and 'class="mpin"' in home
     assert 'id="confirm"' in home and 'id="confirm"' not in forgot

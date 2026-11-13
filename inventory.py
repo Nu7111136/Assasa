@@ -340,7 +340,7 @@ def upgrade_notebook_schema(db, User, Item, Notebook, now_fn):
 def register_inventory(app, db, User, Item, StockMove, Notebook, now):
     global log
     import logging
-    log = logging.getLogger('asasa')
+    log = logging.getLogger('rakhza')
 
     def inv():
         return INV[getattr(g, 'lang', 'en')]

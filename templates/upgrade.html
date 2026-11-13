@@ -6,12 +6,12 @@
 <p class="pay-label">{{ 'Send JazzCash to this number' if lang=='en' else 'اس نمبر پر JazzCash بھیجیں' }}</p>
 {% if jazzcash %}<strong><bdi id="jazz-number">{{jazzcash}}</bdi></strong>
 <button type="button" class="copy-btn" data-copied="{{ t.copied }}">{{ t.copy_number }}</button>
-{% else %}<p class="missing-number">{{ 'Receive number is not set. In Render: Environment → PAYMENT_JAZZCASH_NUMBER → Save → Manual Deploy.' if lang=='en' else 'وصولی نمبر سیٹ نہیں۔ Render میں PAYMENT_JAZZCASH_NUMBER لگائیں، محفوظ کریں، پھر Manual Deploy۔' }}</p>{% endif %}
+{% else %}<p class="missing-number">{{ 'Receive number is not set. Put PAYMENT_JAZZCASH_NUMBER in the vault and unlock it on the VPS.' if lang=='en' else 'وصولی نمبر سیٹ نہیں۔ والٹ میں PAYMENT_JAZZCASH_NUMBER لگائیں، VPS پر unlock کریں۔' }}</p>{% endif %}
 </div>
 {% if is_tester %}
 <aside class="sim-pay">
 <h2>{{ 'Test payment (no real JazzCash)' if lang=='en' else 'ٹیسٹ ادائیگی (اصل JazzCash نہیں)' }}</h2>
-<p>{{ 'Adds Rs 299 to the test wallet and opens one month on this account. Use this on Render while the real gateway is not connected.' if lang=='en' else 'ٹیسٹ والیٹ میں 299 روپے جمع ہوں گے اور اس اکاؤنٹ پر ایک مہینہ کھل جائے گا۔' }}</p>
+<p>{{ 'Adds Rs 299 to the test wallet and opens one month on this account. Use this on staging while live JazzCash is not connected.' if lang=='en' else 'ٹیسٹ والیٹ میں 299 روپے جمع ہوں گے اور اس اکاؤنٹ پر ایک مہینہ کھل جائے گا۔' }}</p>
 <form method="post" action="{{ url_for('simulate_payment') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit">{{ 'Pay Rs 299 (test)' if lang=='en' else '299 روپے ادا کریں (ٹیسٹ)' }}</button></form>
 </aside>
 {% endif %}

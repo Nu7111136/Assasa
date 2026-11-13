@@ -307,7 +307,7 @@ def test_remaining_seconds_naive_aware_and_missing():
 
 
 def test_naive_expired_trial_renders_upgrade(client, app, caplog):
-    caplog.set_level(logging.INFO, logger='asasa')
+    caplog.set_level(logging.INFO, logger='rakhza')
     signup(client)
     with app.app_context():
         u = User.query.one()

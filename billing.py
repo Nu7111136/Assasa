@@ -12,7 +12,7 @@ from flask import g, session, request, redirect, url_for, render_template, flash
 from sqlalchemy import func, inspect, text
 from sqlalchemy.exc import IntegrityError
 
-log = logging.getLogger('asasa')
+log = logging.getLogger('rakhza')
 PKT = ZoneInfo('Asia/Karachi')
 
 
@@ -121,7 +121,7 @@ def period_bounds(kind='month', date_from='', date_to='', at=None):
 
 
 def register_billing(app, db, User, Payment, now, ReconNote=None):
-    app.extensions['asasa_payment'] = Payment
+    app.extensions['rakhza_payment'] = Payment
     app.config.setdefault('APP_ENV', os.getenv('APP_ENV', 'production'))
     app.config.setdefault('PAYMENT_JAZZCASH_NUMBER', os.getenv('PAYMENT_JAZZCASH_NUMBER', '').strip())
     app.config.setdefault('TESTER_PHONES', os.getenv('TESTER_PHONES', ''))
@@ -387,7 +387,7 @@ def register_billing(app, db, User, Payment, now, ReconNote=None):
             if local:
                 user.billing_day = local.day
         db.session.commit()
-        import main as asasa_main
+        import main as app_main
         from inventory import upgrade_notebook_schema
-        upgrade_notebook_schema(db, User, asasa_main.Item, asasa_main.Notebook, now)
+        upgrade_notebook_schema(db, User, app_main.Item, app_main.Notebook, now)
         print('POC billing schema ready. Existing data preserved.')

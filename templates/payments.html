@@ -1,5 +1,5 @@
 {% extends 'base.html' %}{% block content %}
-<p class="admin-kicker"><a href="{{ url_for('admin_home') }}">{{ 'Asasa office' if lang=='en' else 'اثاثہ دفتر' }}</a></p>
+<p class="admin-kicker"><a href="{{ url_for('admin_home') }}">{{ 'Rakhza office' if lang=='en' else 'رکھزا دفتر' }}</a></p>
 <h1>{{'Pending payments' if lang=='en' else 'زیرِ جائزہ ادائیگیاں'}}</h1>
 <p class="wallet">{{ 'Test wallet received' if lang=='en' else 'ٹیسٹ والیٹ میں وصولی' }}: <strong>Rs {{ wallet }}</strong></p>
 <p class="lead">{{'Approved and test payments add to this total. Verify real JazzCash credit before approving a live TID.' if lang=='en' else 'منظور اور ٹیسٹ ادائیگیاں اس رقم میں شامل ہیں۔ اصل JazzCash رقم دیکھے بغیر لائیو TID منظور نہ کریں۔'}}</p>

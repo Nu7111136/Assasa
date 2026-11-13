@@ -1,8 +1,11 @@
-# Asasa signup POC
+# Rakhza signup POC
+
+Live host: **https://rakhza.digital** (staging: **https://staging.rakhza.digital**).
+VPS runbook: `deploy/VPS.md`. Secrets vault: `secrets/README.md`.
 
 Small Flask + SQLAlchemy server-rendered PWA, not a production identity platform.
 The latest signup brief supersedes the plan's earlier OTP-only onboarding: name,
-phone, 6-digit MPIN, and business type. Forgot MPIN is handled by Asasa office.
+phone, 6-digit MPIN, and business type. Forgot MPIN is handled by Rakhza office.
 Every new
 account gets one server-recorded 120-hour trial. Price copy: Rs 299/month after
 five days, no automatic charge. Manual payment review is included; real gateway billing, inventory, OTP and
@@ -35,7 +38,7 @@ to Home Screen. Urdu uses RTL with LTR phone inputs. Native Urdu review is
 needed before release. This is a web app installed from a browser, not a Play or
 App Store native build.
 
-`DATABASE_URL` unset: development SQLite (`instance/asasa.db`).
+`DATABASE_URL` unset: development SQLite (`instance/rakhza.db`).
 Postgres URL: `postgresql+psycopg://...` (also accepts `postgres://` and
 `postgresql://`). Add `?sslmode=require` for Neon. Database stays outside the zip.
 If SECRET_KEY is blank a random ephemeral key is used: sessions reset after a
@@ -109,7 +112,7 @@ customer data are included in this package.
 
 NZ's original `static/style.css` is retained byte-for-byte at the beginning; new
 rules are appended and use his `--navy` variable. CSS version is `trial-2`, service
-worker cache is `asasa-shell-trial-2`. Private pages remain network-only/no-store.
+worker cache is `rakhza-shell-ui-30`. Private pages remain network-only/no-store.
 
 **Existing installations: back up the DB first**, then from the app directory:
 
