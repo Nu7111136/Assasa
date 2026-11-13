@@ -210,7 +210,10 @@ def test_back_button_and_field_help(client):
     client.get('/language/en?page=login')
     signup(client)
     upgrade = client.get('/upgrade').text
-    assert 'Copy number' in upgrade
+    if (client.application.config.get('PAYMENT_JAZZCASH_NUMBER') or '').strip():
+        assert 'Copy number' in upgrade
+    else:
+        assert 'Receive number is not set' in upgrade
     assert 'id="back-btn"' in upgrade
 
 
