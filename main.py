@@ -13,6 +13,7 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from sqlalchemy.exc import IntegrityError
 from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from billing import register_billing, utc
@@ -140,6 +141,7 @@ def database_uri(value):
 
 def create_app(config=None):
     app = Flask(__name__)
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     uri = database_uri(os.getenv('DATABASE_URL'))
     app.config.update(SECRET_KEY=os.getenv('SECRET_KEY') or os.urandom(32), SQLALCHEMY_DATABASE_URI=uri,
                       SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
@@ -308,7 +310,7 @@ def create_app(config=None):
         db.create_all()
         print('Database initialized.')
 
-    register_billing(app, db, User, Payment, now, ReconNote)
+    register_billing(app, db, User, Payment, now, ReconNote, csrf=csrf)
     register_inventory(app, db, User, Item, StockMove, Notebook, now)
     db_uri = app.config.get('SQLALCHEMY_DATABASE_URI') or ''
     db_kind = 'postgres' if 'postgres' in db_uri else 'sqlite'

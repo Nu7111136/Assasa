@@ -8,6 +8,13 @@
 <button type="button" class="copy-btn" data-copied="{{ t.copied }}">{{ t.copy_number }}</button>
 {% else %}<p class="missing-number">{{ 'Receive number is not set. Put PAYMENT_JAZZCASH_NUMBER in the vault and unlock it on the VPS.' if lang=='en' else 'وصولی نمبر سیٹ نہیں۔ والٹ میں PAYMENT_JAZZCASH_NUMBER لگائیں، VPS پر unlock کریں۔' }}</p>{% endif %}
 </div>
+{% if jazzcash_checkout %}
+<form method="post" action="{{ url_for('jazzcash_pay') }}" class="stack">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit">{{ 'Pay Rs %s with JazzCash'|format(jazzcash_rupees) if lang=='en' else 'JazzCash سے %s روپے ادا کریں'|format(jazzcash_rupees) }}</button>
+</form>
+<p class="notice">{{ 'JazzCash will open. Never type your JazzCash PIN on Rakhza.' if lang=='en' else 'JazzCash کھلے گا۔ رکھزا پر JazzCash پن نہ لکھیں۔' }}</p>
+{% endif %}
 {% if is_tester %}
 <aside class="sim-pay">
 <h2>{{ 'Test payment (no real JazzCash)' if lang=='en' else 'ٹیسٹ ادائیگی (اصل JazzCash نہیں)' }}</h2>

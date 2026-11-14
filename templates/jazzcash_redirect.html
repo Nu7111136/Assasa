@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="{{ lang }}"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rakhza · JazzCash</title>
+</head>
+<body>
+<p>{{ 'Opening JazzCash…' if lang=='en' else 'JazzCash کھل رہا ہے…' }}</p>
+<form id="jc" method="post" action="{{ action }}">
+{% for key, value in fields.items() %}
+<input type="hidden" name="{{ key }}" value="{{ value }}">
+{% endfor %}
+<button type="submit">{{ 'Continue to JazzCash' if lang=='en' else 'JazzCash پر جائیں' }}</button>
+</form>
+<script>document.getElementById('jc').submit();</script>
+</body></html>

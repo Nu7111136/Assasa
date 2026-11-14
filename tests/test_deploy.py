@@ -64,6 +64,9 @@ def test_vps_compose_and_caddy_use_rakhza_digital():
     vault_example = (ROOT / 'secrets' / 'rakhza.env.example').read_text(encoding='utf-8')
     assert 'PAYMENT_JAZZCASH_NUMBER' in vault_example
     assert 'JAZZCASH_MERCHANT_ID' in vault_example
+    assert 'JAZZCASH_INTEGRITY_SALT' in vault_example
+    assert 'staging.rakhza.digital' in compose
+    assert 'JAZZCASH_AMOUNT_PAISA' in compose
 
 
 def test_cicd_jobs_deploy_staging_then_manual_prod():

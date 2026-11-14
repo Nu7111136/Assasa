@@ -1,4 +1,4 @@
-"""Manual JazzCash verification and trial entitlements. No payment API claims."""
+"""JazzCash billing: TID review, tester simulate, and hosted checkout when keys exist."""
 import logging
 import math
 import os
@@ -11,6 +11,8 @@ from zoneinfo import ZoneInfo
 from flask import g, session, request, redirect, url_for, render_template, flash, abort
 from sqlalchemy import func, inspect, text
 from sqlalchemy.exc import IntegrityError
+
+import jazzcash
 
 log = logging.getLogger('rakhza')
 PKT = ZoneInfo('Asia/Karachi')
@@ -120,12 +122,18 @@ def period_bounds(kind='month', date_from='', date_to='', at=None):
     return start_local.astimezone(timezone.utc), now_local.astimezone(timezone.utc), kind
 
 
-def register_billing(app, db, User, Payment, now, ReconNote=None):
+def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
     app.extensions['rakhza_payment'] = Payment
     app.config.setdefault('APP_ENV', os.getenv('APP_ENV', 'production'))
     app.config.setdefault('PAYMENT_JAZZCASH_NUMBER', os.getenv('PAYMENT_JAZZCASH_NUMBER', '').strip())
     app.config.setdefault('TESTER_PHONES', os.getenv('TESTER_PHONES', ''))
     app.config.setdefault('ADMIN_PHONES', os.getenv('ADMIN_PHONES', ''))
+    app.config.setdefault('JAZZCASH_MERCHANT_ID', os.getenv('JAZZCASH_MERCHANT_ID', '').strip())
+    app.config.setdefault('JAZZCASH_PASSWORD', os.getenv('JAZZCASH_PASSWORD', '').strip())
+    app.config.setdefault('JAZZCASH_INTEGRITY_SALT', os.getenv('JAZZCASH_INTEGRITY_SALT', '').strip())
+    app.config.setdefault('JAZZCASH_ENV', os.getenv('JAZZCASH_ENV', 'live').strip() or 'live')
+    app.config.setdefault('JAZZCASH_AMOUNT_PAISA', os.getenv('JAZZCASH_AMOUNT_PAISA', '').strip())
+    app.config.setdefault('PUBLIC_BASE_URL', os.getenv('PUBLIC_BASE_URL', '').strip())
 
     @app.before_request
     def entitlement():
@@ -149,7 +157,8 @@ def register_billing(app, db, User, Payment, now, ReconNote=None):
         g.readonly = bool(g.user and not g.paid and remaining <= 0)
         # Expired accounts are routed to payment, not a read-only dashboard.
         # Static/PWA assets and language switching must still work on Upgrade.
-        allowed = {'upgrade', 'logout', 'login', 'forgot_password', 'test_mode', 'simulate_payment', 'static', 'sw', 'switch_language'}
+        allowed = {'upgrade', 'logout', 'login', 'forgot_password', 'test_mode', 'simulate_payment',
+                   'jazzcash_pay', 'jazzcash_return', 'static', 'sw', 'switch_language'}
         if g.is_admin:
             allowed.update({'admin_home', 'admin_payments', 'review_payment', 'admin_recon'})
         if g.user:
@@ -173,6 +182,8 @@ def register_billing(app, db, User, Payment, now, ReconNote=None):
                     trial_days=getattr(g,'trial_days',0),
                     is_tester=getattr(g,'is_tester',False), test_mode=getattr(g,'test_mode',False), tester_day=session.get('tester_day',0),
                     jazzcash=app.config['PAYMENT_JAZZCASH_NUMBER'],
+                    jazzcash_checkout=jazzcash.configured(app.config),
+                    jazzcash_rupees=jazzcash.amount_paisa(app.config) // 100,
                     paid_end=pkt_label(user.paid_until) if user else '')
 
     @app.post('/test-mode')
@@ -235,6 +246,68 @@ def register_billing(app, db, User, Payment, now, ReconNote=None):
         flash('ٹیسٹ ادائیگی ہو گئی۔ ایک مہینہ کھل گیا، ٹیسٹ والیٹ میں 299 روپے شامل ہیں۔' if g.lang == 'ur'
               else 'Test payment recorded. One month is active and Rs 299 was added to the test wallet.', 'ok')
         return redirect(url_for('dashboard'))
+
+    @app.post('/billing/jazzcash/pay')
+    def jazzcash_pay():
+        if not g.user:
+            return redirect(url_for('login'))
+        if not jazzcash.configured(app.config):
+            abort(404)
+        when = now()
+        paisa = jazzcash.amount_paisa(app.config)
+        rupees = max(1, paisa // 100)
+        fields = jazzcash.checkout_fields(
+            app.config, user_id=g.user.id, when=when,
+            return_url=jazzcash.return_url_for(app.config, request),
+            amount_paisa_value=paisa,
+        )
+        payment = Payment(user_id=g.user.id, tid=fields['pp_TxnRefNo'], created_at=when, amount=rupees)
+        db.session.add(payment)
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash('ادائیگی پہلے سے جاری ہے۔' if g.lang == 'ur' else 'This payment is already in progress.')
+            return redirect(url_for('upgrade'))
+        log.info('jazzcash checkout user=%s tid=%s rupees=%s', g.user.id, payment.tid, rupees)
+        return render_template(
+            'jazzcash_redirect.html',
+            action=jazzcash.checkout_url(app.config),
+            fields=fields,
+        )
+
+    @app.route('/billing/jazzcash/return', methods=['GET', 'POST'])
+    def jazzcash_return():
+        posted = {k: v for k, v in request.values.items() if k.startswith('pp_')}
+        tid = (posted.get('pp_TxnRefNo') or '').strip()
+        code = (posted.get('pp_ResponseCode') or '').strip()
+        salt = app.config['JAZZCASH_INTEGRITY_SALT']
+        payment = Payment.query.filter_by(tid=tid).first() if tid else None
+        ok = bool(payment and salt and jazzcash.hash_ok(posted, salt, posted.get('pp_SecureHash', '')))
+        log.info(
+            'jazzcash return tid=%s code=%s hash_ok=%s payment=%s',
+            tid, code, ok, payment.id if payment else None,
+        )
+        if payment and payment.status == 'approved':
+            return redirect(url_for('dashboard' if g.user else 'login'))
+        if ok and code == '000':
+            owner = db.session.get(User, payment.user_id)
+            payment.status = 'approved'
+            payment.reviewed_at = now()
+            if owner:
+                grant_month(owner, now())
+            db.session.commit()
+            flash('ادائیگی ہو گئی۔ ایک مہینہ کھل گیا۔' if session.get('lang') == 'ur'
+                  else 'Payment received. One month is now active.', 'ok')
+            return redirect(url_for('dashboard' if g.user else 'login'))
+        if payment and payment.status == 'pending' and code and code != '000':
+            log.info('jazzcash declined tid=%s code=%s', tid, code)
+        flash('JazzCash ادائیگی مکمل نہیں ہوئی۔ TID سے جمع کر سکتے ہیں۔' if session.get('lang') == 'ur'
+              else 'JazzCash did not confirm this payment. You can submit a TID instead.')
+        return redirect(url_for('upgrade' if g.user else 'login'))
+
+    if csrf is not None:
+        csrf.exempt(jazzcash_return)
 
     def _admin_gate():
         if not g.user:
