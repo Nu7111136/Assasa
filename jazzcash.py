@@ -1,10 +1,15 @@
-"""JazzCash hosted checkout (HMAC + form fields). No network I/O."""
+"""JazzCash hosted checkout (HMAC + form fields), notification replies and status inquiry.
+
+Only `inquire()` touches the network, and its transport can be swapped for tests.
+"""
 from __future__ import annotations
 
 import hmac
 import hashlib
+import json
 import os
 import re
+import urllib.request
 from datetime import datetime, timedelta
 from urllib.parse import urljoin
 from zoneinfo import ZoneInfo
@@ -115,7 +120,7 @@ def txn_ref(when: datetime, user_id: int) -> str:
 def checkout_fields(config, *, user_id: int, when: datetime, return_url: str, amount_paisa_value: int) -> dict:
     salt = config['JAZZCASH_INTEGRITY_SALT'].strip()
     local = when.astimezone(PKT)
-    expiry = local + timedelta(hours=3)
+    expiry = local + timedelta(hours=CHECKOUT_HOURS)
     padded = str(int(amount_paisa_value)).zfill(12)
     fields = {
         'pp_Version': '1.1',
@@ -141,3 +146,91 @@ def checkout_fields(config, *, user_id: int, when: datetime, return_url: str, am
 
 def return_url_for(config, request) -> str:
     return urljoin(public_base(config, request) + '/', 'billing/jazzcash/return')
+
+
+# ---- Notification (IPN) reply ----------------------------------------------
+
+def ipn_reply(config, ok: bool) -> dict:
+    """Signed acknowledgement JazzCash expects back from the notification URL."""
+    salt = (config.get('JAZZCASH_INTEGRITY_SALT') or '').strip()
+    body = {
+        'pp_ResponseCode': '000' if ok else '199',
+        'pp_ResponseMessage': 'IPN received successfully' if ok else 'IPN rejected',
+    }
+    body['pp_SecureHash'] = secure_hash(body, salt) if salt else ''
+    return body
+
+
+# ---- Status inquiry ----------------------------------------------------------
+
+INQUIRY_URL = {
+    'sandbox': 'https://sandbox.jazzcash.com.pk/ApplicationAPI/API/PaymentInquiry/Inquire',
+    'live': 'https://payments.jazzcash.com.pk/ApplicationAPI/API/PaymentInquiry/Inquire',
+}
+# pp_ResponseCode on an inquiry says whether the *inquiry* worked; the payment's
+# own outcome is pp_PaymentResponseCode / pp_Status. Confirm these against the
+# integration guide that comes with the live keys.
+INQUIRY_OK = '000'
+PAID_CODES = frozenset({'000', '121'})
+PAID_STATUSES = frozenset({'completed', 'success', 'paid'})
+FAILED_STATUSES = frozenset({'failed', 'reversed', 'rejected', 'expired', 'cancelled', 'canceled'})
+# A checkout link is valid for CHECKOUT_HOURS (pp_TxnExpiryDateTime).
+CHECKOUT_HOURS = 3
+
+
+def inquiry_url(config) -> str:
+    env = (config.get('JAZZCASH_ENV') or 'live').strip().lower()
+    return INQUIRY_URL['sandbox'] if env == 'sandbox' else INQUIRY_URL['live']
+
+
+def inquiry_fields(config, tid: str) -> dict:
+    fields = {
+        'pp_TxnRefNo': tid,
+        'pp_MerchantID': config['JAZZCASH_MERCHANT_ID'].strip(),
+        'pp_Password': config['JAZZCASH_PASSWORD'].strip(),
+    }
+    fields['pp_SecureHash'] = secure_hash(fields, config['JAZZCASH_INTEGRITY_SALT'].strip())
+    return fields
+
+
+def http_post_json(url: str, payload: dict, timeout: float = 20) -> dict:
+    data = json.dumps(payload).encode('utf-8')
+    req = urllib.request.Request(url, data=data, method='POST',
+                                 headers={'Content-Type': 'application/json', 'Accept': 'application/json'})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310 (fixed https host)
+        return json.loads(resp.read().decode('utf-8') or '{}')
+
+
+def inquire(config, tid: str, post=None) -> dict:
+    """Ask JazzCash what happened to `tid`. `post(url, payload) -> dict` is injectable."""
+    return (post or http_post_json)(inquiry_url(config), inquiry_fields(config, tid))
+
+
+def read_inquiry(resp: dict, payment, config) -> tuple[str, str]:
+    """Map an inquiry answer to approve / decline / pending / invalid (same words as verify_return)."""
+    if not isinstance(resp, dict):
+        return 'invalid', 'not_json'
+    salt = (config.get('JAZZCASH_INTEGRITY_SALT') or '').strip()
+    given = (resp.get('pp_SecureHash') or '').strip()
+    if given and not hash_ok(resp, salt, given):
+        return 'invalid', 'bad_hash'
+    code = str(resp.get('pp_ResponseCode') or '').strip()
+    if code != INQUIRY_OK:
+        # Includes "no such transaction" (the shop never got as far as paying).
+        # The sweep expires those by age; never fail on a code we did not verify.
+        return 'invalid', f'inquiry_{code or "blank"}'
+    ref = str(resp.get('pp_TxnRefNo') or payment.tid).strip()
+    if ref != payment.tid:
+        return 'invalid', 'ref_mismatch'
+    pay_code = str(resp.get('pp_PaymentResponseCode') or '').strip()
+    status = str(resp.get('pp_Status') or '').strip().lower()
+    if pay_code in PAID_CODES or status in PAID_STATUSES:
+        raw = str(resp.get('pp_Amount') or '').strip()
+        if raw and (not raw.isdigit() or int(raw) != int(payment.amount or 0) * 100):
+            return 'invalid', 'amount_mismatch'
+        return 'approve', pay_code or status
+    if pay_code in PENDING_CODES or status in ('pending', 'initiated', 'in process', ''):
+        return 'pending', pay_code or status or 'unknown'
+    if status in FAILED_STATUSES or pay_code:
+        return 'decline', pay_code or status
+    return 'pending', 'unknown'

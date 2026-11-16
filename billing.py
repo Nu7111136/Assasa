@@ -4,6 +4,9 @@ import math
 import os
 import re
 import secrets
+import time as time_module
+
+import click
 from calendar import monthrange
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -169,7 +172,7 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
         # Expired accounts are routed to payment, not a read-only dashboard.
         # Static/PWA assets and language switching must still work on Upgrade.
         allowed = {'upgrade', 'logout', 'login', 'forgot_password', 'test_mode', 'simulate_payment',
-                   'jazzcash_pay', 'jazzcash_return', 'jazzcash_wait', 'jazzcash_state',
+                   'jazzcash_pay', 'jazzcash_return', 'jazzcash_ipn', 'jazzcash_wait', 'jazzcash_state',
                    'static', 'sw', 'switch_language'}
         if g.is_admin:
             allowed.update({'admin_home', 'admin_payments', 'review_payment', 'admin_recon'})
@@ -324,27 +327,121 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
         posted = {k: v for k, v in request.values.items() if k.startswith('pp_')}
         tid = (posted.get('pp_TxnRefNo') or '').strip()
         code = (posted.get('pp_ResponseCode') or '').strip()
-        payment = Payment.query.filter_by(tid=tid).first() if tid else None
-        if payment is not None and payment_kind(payment) != 'checkout':
-            payment = None  # never let a gateway return touch a pasted-TID or test row
+        payment = checkout_by_ref(tid)
         outcome, reason = jazzcash.verify_return(posted, payment, app.config)
         log.info('jazzcash return tid=%s code=%s outcome=%s reason=%s payment=%s',
                  tid, code, outcome, reason, payment.id if payment else None)
-        if outcome == 'approve':
-            if settle(payment.id, 'approved', code=code):
-                log.info('jazzcash approved pid=%s user=%s', payment.id, payment.user_id)
-        elif outcome == 'decline':
-            if settle(payment.id, 'failed', code=code):
-                log.info('jazzcash failed pid=%s code=%s', payment.id, code)
-        elif outcome == 'pending' and payment.status == 'pending':
-            payment.gateway_code = code[:8]
-            db.session.commit()
+        apply_outcome(payment, outcome, code, source='return')
         if payment is not None:
             return redirect(url_for('jazzcash_wait', pid=payment.id), code=303)
         return redirect(url_for('upgrade', jc='unconfirmed'), code=303)
 
+    def checkout_by_ref(tid):
+        payment = Payment.query.filter_by(tid=tid).first() if tid else None
+        if payment is not None and payment_kind(payment) != 'checkout':
+            return None  # never let JazzCash touch a pasted-TID or test row
+        return payment
+
+    def apply_outcome(payment, outcome, code, source):
+        """Shared by the browser return, the IPN and the sweep."""
+        if payment is None:
+            return
+        if outcome == 'approve':
+            if settle(payment.id, 'approved', code=code):
+                log.info('jazzcash approved via=%s pid=%s user=%s', source, payment.id, payment.user_id)
+        elif outcome == 'decline':
+            if settle(payment.id, 'failed', code=code):
+                log.info('jazzcash failed via=%s pid=%s code=%s', source, payment.id, code)
+        elif outcome == 'pending' and payment.status == 'pending' and code:
+            payment.gateway_code = code[:8]
+            db.session.commit()
+
+    @app.post('/billing/jazzcash/ipn')
+    def jazzcash_ipn():
+        """Server-to-server notification from JazzCash. Works even if the shop's
+        browser never comes back. Register this URL in the merchant portal."""
+        if not jazzcash.configured(app.config):
+            abort(404)
+        src = request.get_json(silent=True) if request.is_json else None
+        if not isinstance(src, dict):
+            src = request.form.to_dict()
+        posted = {k: '' if v is None else str(v) for k, v in src.items() if k.startswith('pp_')}
+        tid = (posted.get('pp_TxnRefNo') or '').strip()
+        code = (posted.get('pp_ResponseCode') or '').strip()
+        payment = checkout_by_ref(tid)
+        outcome, reason = jazzcash.verify_return(posted, payment, app.config)
+        log.info('jazzcash ipn tid=%s code=%s outcome=%s reason=%s payment=%s',
+                 tid, code, outcome, reason, payment.id if payment else None)
+        apply_outcome(payment, outcome, code, source='ipn')
+        ok = outcome != 'invalid'
+        return jazzcash.ipn_reply(app.config, ok), (200 if ok else 400)
+
+    def sweep(post=None, at=None):
+        """Ask JazzCash about checkouts still pending. Returns counts for logs/tests.
+
+        - younger than SWEEP_MIN_AGE: skipped (the return/IPN usually lands first)
+        - paid -> approved; clearly failed -> failed
+        - no answer we trust and older than the checkout link's life + 1h -> failed 'expired'
+        - older than 7 days: left alone for the office
+        """
+        counts = dict(checked=0, approved=0, failed=0, expired=0, waiting=0, errors=0)
+        if not jazzcash.configured(app.config):
+            counts['skipped'] = 1
+            return counts
+        at = utc(at) or now()
+        newest = at - timedelta(minutes=2)
+        oldest = at - timedelta(days=7)
+        give_up = timedelta(hours=jazzcash.CHECKOUT_HOURS + 1)
+        rows = [p for p in Payment.query.filter_by(status='pending').order_by(Payment.id).all()
+                if payment_kind(p) == 'checkout' and oldest <= utc(p.created_at) <= newest]
+        for payment in rows:
+            counts['checked'] += 1
+            pid, tid, created = payment.id, payment.tid, utc(payment.created_at)
+            try:
+                resp = jazzcash.inquire(app.config, tid, post)
+            except Exception as err:  # network, TLS, non-JSON: try again next round
+                counts['errors'] += 1
+                log.warning('jazzcash inquiry error pid=%s tid=%s err=%s', pid, tid, type(err).__name__)
+                continue
+            outcome, reason = jazzcash.read_inquiry(resp, payment, app.config)
+            log.info('jazzcash inquiry pid=%s tid=%s outcome=%s reason=%s', pid, tid, outcome, reason)
+            if outcome == 'approve':
+                if settle(pid, 'approved', code=str(reason)):
+                    counts['approved'] += 1
+                    log.info('jazzcash approved via=sweep pid=%s', pid)
+            elif outcome == 'decline':
+                if settle(pid, 'failed', code=str(reason)):
+                    counts['failed'] += 1
+            elif at - created > give_up and reason not in ('bad_hash', 'amount_mismatch', 'ref_mismatch'):
+                if settle(pid, 'failed', code='expired'):
+                    counts['expired'] += 1
+                    log.info('jazzcash expired via=sweep pid=%s', pid)
+            else:
+                counts['waiting'] += 1
+        return counts
+
+    app.extensions['rakhza_jazzcash_sweep'] = sweep
+
+    @app.cli.command('jazzcash-sweep')
+    @click.option('--loop', default=0, type=int, help='Seconds between rounds. 0 = run once.')
+    def jazzcash_sweep_cmd(loop):
+        """Settle pending JazzCash checkouts by asking JazzCash (status inquiry)."""
+        while True:
+            try:
+                counts = sweep()
+                log.info('jazzcash sweep %s', ' '.join(f'{k}={v}' for k, v in counts.items()))
+            except Exception:
+                log.exception('jazzcash sweep crashed; retrying next round')
+                db.session.rollback()
+            finally:
+                db.session.remove()
+            if loop <= 0:
+                break
+            time_module.sleep(loop)
+
     if csrf is not None:
         csrf.exempt(jazzcash_return)
+        csrf.exempt(jazzcash_ipn)
 
     def own_checkout(pid):
         payment = db.session.get(Payment, pid)

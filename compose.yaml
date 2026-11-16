@@ -83,6 +83,35 @@ services:
       redis:
         condition: service_started
 
+  # Background: ask JazzCash about checkouts still pending (status inquiry) every
+  # 5 minutes. Idles quietly while no Payment Gateway keys are set.
+  sweep_prod:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env.prod
+    environment:
+      DATABASE_URL: postgresql+psycopg://rakhza:${POSTGRES_PASSWORD}@db:5432/rakhza
+      APP_ENV: production
+      PUBLIC_BASE_URL: https://rakhza.digital
+    command: ["flask", "--app", "main", "jazzcash-sweep", "--loop", "300"]
+    depends_on:
+      - web_prod
+
+  sweep_staging:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    environment:
+      DATABASE_URL: postgresql+psycopg://rakhza:${POSTGRES_PASSWORD}@db:5432/rakhza_staging
+      APP_ENV: staging
+      PUBLIC_BASE_URL: https://staging.rakhza.digital
+      JAZZCASH_AMOUNT_PAISA: "100"
+    command: ["flask", "--app", "main", "jazzcash-sweep", "--loop", "300"]
+    depends_on:
+      - web_staging
+
 volumes:
   pg_data:
   redis_data:

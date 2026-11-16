@@ -58,5 +58,27 @@ Rakhza office lists unconfirmed checkouts separately from pasted TIDs. Approve
 one only after finding that reference paid in the JazzCash merchant portal.
 The TID paste form stays on Upgrade for agents and failed checkouts.
 
-Still to do: server-to-server IPN listener and a status-inquiry job, so a
-checkout settles even if the shop's browser never comes back.
+## When the browser never comes back
+
+Two backups settle a checkout without the shop's phone:
+
+1. **IPN** `POST /billing/jazzcash/ipn` (form or JSON). JazzCash's server
+   calls it after a payment. Same checks as the return. Replies with a signed
+   `{"pp_ResponseCode":"000"}` (or `199` + HTTP 400 if we could not trust it).
+   Register `https://rakhza.digital/billing/jazzcash/ipn` (and the staging one)
+   as the IPN URL in the JazzCash merchant portal.
+2. **Sweep** `flask --app main jazzcash-sweep --loop 300`, run by the
+   `sweep_prod` / `sweep_staging` Compose services. Every 5 minutes it asks the
+   JazzCash status inquiry API about each checkout pending for 2 min – 7 days:
+   paid → approved; clearly failed → failed; no trusted answer after the 3 h
+   link plus 1 h → failed `expired`. Network errors and suspicious answers
+   (bad signature, wrong amount) never change a row. Idles while no keys are set.
+
+Inquiry endpoint, response field names and the "paid" codes (`000`/`121`,
+status `Completed`) are in `jazzcash.py`; confirm them against the guide that
+comes with the live keys.
+
+## Testing before real keys
+
+`scripts/jazzcash_fake.py` signs an IPN with your salt and sends it, playing
+JazzCash. Use it with **dummy** keys on staging only; it refuses production.

@@ -3,9 +3,10 @@
 set -euo pipefail
 cd /opt/rakhza
 case "${1:-}" in
-  staging) svc=web_staging ;;
-  production|prod) svc=web_prod ;;
+  staging) svc="web_staging sweep_staging" ;;
+  production|prod) svc="web_prod sweep_prod" ;;
   *) echo "usage: $0 staging|production" >&2; exit 1 ;;
 esac
-docker compose --env-file .env.prod up -d --build db redis caddy "$svc"
+# $svc is intentionally unquoted: it holds the web service and its sweep worker.
+docker compose --env-file .env.prod up -d --build db redis caddy $svc
 docker compose --env-file .env.prod ps
