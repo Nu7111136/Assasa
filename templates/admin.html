@@ -10,6 +10,7 @@
 <a class="admin-slab muted" href="#shops"><span class="n">{{ buckets.unpaid }}</span><h2>{{ 'Trial ended, never paid' if lang=='en' else 'آزمائش ختم، کبھی ادا نہیں' }}</h2><p>{{ 'Used the free days and never sent Rs 299.' if lang=='en' else 'مفت دن استعمال کیے، 299 روپے کبھی نہیں بھیجے۔' }}</p></a>
 </section>
 {% if pending_rows %}<p class="admin-next">{{ pending_rows|length }} {{ 'receipts are waiting. Open JazzCash, then Approve or Reject below.' if lang=='en' else 'رسیدیں منتظر ہیں۔ JazzCash کھولیں، پھر نیچے منظور یا مسترد کریں۔' }}</p>{% endif %}
+{% if checkout_rows %}<p class="admin-next"><a href="#checkouts">{{ checkout_rows|length }} {{ 'JazzCash checkouts have no confirmation yet.' if lang=='en' else 'JazzCash ادائیگیوں کی ابھی تصدیق نہیں ہوئی۔' }}</a></p>{% endif %}
 
 <section class="admin-card" id="money">
 <h2>{{ 'Money' if lang=='en' else 'رقم' }}</h2>
@@ -60,6 +61,7 @@
 </article>
 {% else %}<p class="vx-empty">{{ 'Nothing waiting. New TIDs from Upgrade land here.' if lang=='en' else 'کچھ منتظر نہیں۔ اپ گریڈ سے نئی TID یہاں آئیں گی۔' }}</p>{% endfor %}
 </section>
+{% with office=True %}{% include '_checkout_rows.html' %}{% endwith %}
 
 <section class="admin-card" id="shops">
 <h2>{{ 'Every shop' if lang=='en' else 'ہر دکان' }}</h2>
@@ -94,8 +96,9 @@
 <tr>
 <td><bdi>{{ p.tid }}</bdi></td>
 <td>{{ u.name }}<br><bdi>{{ u.phone }}</bdi></td>
-<td>{% if is_test_tid(p.tid) %}{{ 'Test' if lang=='en' else 'ٹیسٹ' }}{% else %}{{ 'Live-looking' if lang=='en' else 'لائیو جیسی' }}{% endif %}</td>
-<td class="status-{{ p.status }}">{{ {'pending':'زیرِ جائزہ','approved':'منظور','rejected':'مسترد'}[p.status] if lang=='ur' else p.status }}</td>
+{% set kind = payment_kind(p) %}
+<td>{% if kind=='test' %}{{ 'Test' if lang=='en' else 'ٹیسٹ' }}{% elif kind=='checkout' %}{{ 'JazzCash checkout' if lang=='en' else 'JazzCash چیک آؤٹ' }}{% else %}{{ 'Live-looking' if lang=='en' else 'لائیو جیسی' }}{% endif %}</td>
+<td class="status-{{ p.status }}">{{ {'pending':'زیرِ جائزہ','approved':'منظور','rejected':'مسترد','failed':'مکمل نہیں ہوئی'}.get(p.status, p.status) if lang=='ur' else ('not completed' if p.status=='failed' else p.status) }}</td>
 <td class="amount">{{ p.amount }}</td>
 <td>{{ pkt_label(p.created_at) }}</td>
 </tr>

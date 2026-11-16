@@ -1,0 +1,32 @@
+{% extends 'base.html' %}{% block content %}
+{% set en = lang=='en' %}
+{% if payment.status == 'pending' %}
+<section class="jc-wait" data-jc-state="{{ url_for('jazzcash_state', pid=payment.id) }}" aria-live="polite">
+<div class="jc-spinner" aria-hidden="true"></div>
+<h1>{{ 'Waiting for JazzCash' if en else 'JazzCash کا انتظار' }}</h1>
+<p class="lead">{{ 'If JazzCash asked you to approve on your phone, do it now. This page updates by itself.' if en else 'اگر JazzCash نے فون پر منظوری مانگی ہے تو ابھی کریں۔ یہ صفحہ خود بدل جائے گا۔' }}</p>
+<p class="jc-ref">{{ 'Payment' if en else 'ادائیگی' }}: <bdi>{{ payment.tid }}</bdi> · Rs {{ payment.amount }}</p>
+<div class="jc-slow" hidden>
+<p><strong>{{ 'JazzCash has not confirmed yet.' if en else 'JazzCash نے ابھی تصدیق نہیں کی۔' }}</strong></p>
+<p>{{ 'Do not pay again. If money left your JazzCash account, Rakhza office can see this payment and will turn on your month after checking.' if en else 'دوبارہ ادائیگی نہ کریں۔ اگر آپ کے JazzCash سے رقم کٹ گئی ہے تو رکھزا دفتر یہ ادائیگی دیکھ سکتا ہے اور جانچ کے بعد مہینہ کھول دے گا۔' }}</p>
+<p>{{ 'If no money left your account, you can go back and try again.' if en else 'اگر رقم نہیں کٹی تو واپس جا کر دوبارہ کوشش کریں۔' }}</p>
+<a class="button-link" href="{{ url_for('upgrade') }}">{{ 'Back to Upgrade' if en else 'اپ گریڈ پر واپس' }}</a>
+</div>
+<noscript><p><a href="{{ url_for('jazzcash_wait', pid=payment.id) }}">{{ 'Check again' if en else 'دوبارہ دیکھیں' }}</a></p></noscript>
+</section>
+{% else %}
+<section class="jc-wait jc-done">
+<h1>{{ 'Payment did not go through' if en else 'ادائیگی مکمل نہیں ہوئی' }}</h1>
+<p class="lead">{{ 'JazzCash did not complete this payment. No month was added and you were not charged by Rakhza.' if en else 'JazzCash نے یہ ادائیگی مکمل نہیں کی۔ کوئی مہینہ نہیں کھلا۔' }}</p>
+<p class="jc-ref">{{ 'Payment' if en else 'ادائیگی' }}: <bdi>{{ payment.tid }}</bdi>{% if payment.gateway_code %} · {{ 'code' if en else 'کوڈ' }} <bdi>{{ payment.gateway_code }}</bdi>{% endif %}</p>
+{% if jazzcash_checkout %}
+<form method="post" action="{{ url_for('jazzcash_pay') }}" class="stack">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit">{{ 'Try JazzCash again' if en else 'JazzCash دوبارہ آزمائیں' }}</button>
+</form>
+{% endif %}
+<p>{{ 'Or send Rs 299 to our JazzCash number and paste the TID on the Upgrade page.' if en else 'یا ہمارے JazzCash نمبر پر 299 روپے بھیج کر اپ گریڈ صفحے پر TID جمع کریں۔' }}</p>
+<a class="button-link btn-quiet" href="{{ url_for('upgrade') }}">{{ 'Back to Upgrade' if en else 'اپ گریڈ پر واپس' }}</a>
+</section>
+{% endif %}
+{% endblock %}

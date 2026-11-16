@@ -2,19 +2,21 @@
 {% include '_tester_buttons.html' %}
 <h1>{{ 'Upgrade your account' if lang=='en' else 'اپنا اکاؤنٹ اپ گریڈ کریں' }}</h1>
 <p class="payment-amount">{{ 'Rs 299 for one month' if lang=='en' else 'ایک مہینے کے لیے 299 روپے' }}</p>
+{% if request.args.get('jc') == 'unconfirmed' %}<p class="flash error" role="alert">{{ 'JazzCash did not confirm this payment. Do not pay again yet. If money left your account, paste the TID from your receipt below.' if lang=='en' else 'JazzCash نے اس ادائیگی کی تصدیق نہیں کی۔ ابھی دوبارہ ادا نہ کریں۔ رقم کٹ گئی ہو تو رسید کی TID نیچے جمع کریں۔' }}</p>{% endif %}
+{% if jazzcash_checkout %}
+<form method="post" action="{{ url_for('jazzcash_pay') }}" class="stack">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit">{{ 'Pay Rs %s with JazzCash'|format(jazzcash_rupees) if lang=='en' else 'JazzCash سے %s روپے ادا کریں'|format(jazzcash_rupees) }}</button>
+</form>
+<p class="notice">{{ 'JazzCash will open. Your month starts as soon as JazzCash confirms. Never type your JazzCash PIN on Rakhza.' if lang=='en' else 'JazzCash کھلے گا۔ JazzCash کی تصدیق ہوتے ہی مہینہ شروع ہو جائے گا۔ رکھزا پر JazzCash پن نہ لکھیں۔' }}</p>
+<p class="pay-or">{{ 'Or send money yourself and paste the TID' if lang=='en' else 'یا خود رقم بھیج کر TID جمع کریں' }}</p>
+{% endif %}
 <div class="pay-number" data-copy>
 <p class="pay-label">{{ 'Send JazzCash to this number' if lang=='en' else 'اس نمبر پر JazzCash بھیجیں' }}</p>
 {% if jazzcash %}<strong><bdi id="jazz-number">{{jazzcash}}</bdi></strong>
 <button type="button" class="copy-btn" data-copied="{{ t.copied }}">{{ t.copy_number }}</button>
 {% else %}<p class="missing-number">{{ 'Receive number is not set. Put PAYMENT_JAZZCASH_NUMBER in the vault and unlock it on the VPS.' if lang=='en' else 'وصولی نمبر سیٹ نہیں۔ والٹ میں PAYMENT_JAZZCASH_NUMBER لگائیں، VPS پر unlock کریں۔' }}</p>{% endif %}
 </div>
-{% if jazzcash_checkout %}
-<form method="post" action="{{ url_for('jazzcash_pay') }}" class="stack">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit">{{ 'Pay Rs %s with JazzCash'|format(jazzcash_rupees) if lang=='en' else 'JazzCash سے %s روپے ادا کریں'|format(jazzcash_rupees) }}</button>
-</form>
-<p class="notice">{{ 'JazzCash will open. Never type your JazzCash PIN on Rakhza.' if lang=='en' else 'JazzCash کھلے گا۔ رکھزا پر JazzCash پن نہ لکھیں۔' }}</p>
-{% endif %}
 {% if is_tester %}
 <aside class="sim-pay">
 <h2>{{ 'Test payment (no real JazzCash)' if lang=='en' else 'ٹیسٹ ادائیگی (اصل JazzCash نہیں)' }}</h2>
@@ -31,5 +33,5 @@
 <input id="tid" name="tid" lang="en" minlength="5" maxlength="64" pattern="[A-Za-z0-9-]{5,64}" dir="ltr" required autocomplete="off" enterkeyhint="done" placeholder="e.g. 123456789" spellcheck="false" autocapitalize="characters">
 <p class="hint">{{ t.hint_tid }}</p></div>
 <button>{{ 'Submit for review' if lang=='en' else 'جائزے کے لیے جمع کریں' }}</button></form>
-{% for p in payments %}<p class="payment-status status-{{p.status}}"><bdi>{{p.tid}}</bdi> · {{ {'pending':'زیرِ جائزہ','approved':'منظور','rejected':'مسترد'}[p.status] if lang=='ur' else p.status }}</p>{% endfor %}
+{% for p in payments %}{% set checkout = payment_kind(p) == 'checkout' %}<p class="payment-status status-{{p.status}}"><bdi>{{p.tid}}</bdi>{% if checkout %}<span class="kind-tag">JazzCash</span>{% endif %} · {{ {'pending':'زیرِ جائزہ','approved':'منظور','rejected':'مسترد','failed':'مکمل نہیں ہوئی'}.get(p.status, p.status) if lang=='ur' else ('not completed' if p.status=='failed' else p.status) }}{% if checkout and p.status=='pending' %}<a href="{{ url_for('jazzcash_wait', pid=p.id) }}">{{ 'Check' if lang=='en' else 'دیکھیں' }}</a>{% endif %}</p>{% endfor %}
 <p class="switch"><a href="/dashboard">{{t.dashboard}}</a></p>{% endblock %}

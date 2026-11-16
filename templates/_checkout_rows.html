@@ -1,0 +1,13 @@
+{# Unconfirmed JazzCash gateway checkouts. Expects checkout_rows, pkt_label, and optional office=True. #}
+{% if checkout_rows %}
+<section class="admin-card" id="checkouts">
+<h2>{{ 'JazzCash checkouts not confirmed' if lang=='en' else 'JazzCash ادائیگیاں جن کی تصدیق نہیں ہوئی' }}</h2>
+<p class="lead">{{ 'These shops opened JazzCash but no confirmation came back. Most were abandoned. Only Approve after you find the reference in the JazzCash merchant portal as paid.' if lang=='en' else 'ان دکانوں نے JazzCash کھولا لیکن تصدیق واپس نہیں آئی۔ اکثر ادھوری چھوڑ دی گئیں۔ صرف تب منظور کریں جب JazzCash مرچنٹ پورٹل میں یہ ریفرنس ادا شدہ نظر آئے۔' }}</p>
+{% for p,u in checkout_rows %}
+<article class="payment-card"><h2>{{ u.name }}</h2><p><bdi>{{ u.phone }}</bdi></p>
+<p>{{ 'Ref' if lang=='en' else 'ریفرنس' }}: <bdi>{{ p.tid }}</bdi><span class="kind-tag">JazzCash</span> · Rs {{ p.amount }} · {{ pkt_label(p.created_at) }}{% if p.gateway_code %} · {{ 'code' if lang=='en' else 'کوڈ' }} <bdi>{{ p.gateway_code }}</bdi>{% endif %}</p>
+<div class="actions">{% for action in ('approve','reject') %}<form method="post" action="{{ url_for('review_payment', pid=p.id, action=action) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% if office %}<input type="hidden" name="next" value="office">{% endif %}<button{% if action=='reject' %} class="btn-quiet"{% endif %}>{{ {'approve':'منظور کریں','reject':'مسترد کریں'}[action] if lang=='ur' else action|title }}</button></form>{% endfor %}</div>
+</article>
+{% endfor %}
+</section>
+{% endif %}

@@ -30,3 +30,33 @@ TID paste stays for agents and failed callbacks.
 
 Do not paste Merchant password or integrity salt into GitHub or chat.
 Put them in `secrets/rakhza.env` and lock the vault.
+
+## How a checkout is settled
+
+Every payment row has a `method`: `tid` (pasted receipt), `checkout`
+(gateway), or `test` (tester button). Older rows are inferred from the ID.
+
+The return at `/billing/jazzcash/return` changes a row only when **all** hold:
+signature valid with our salt, `pp_MerchantID` is ours, `pp_TxnRefNo` is a
+`checkout` row, and for success `pp_Amount` equals the amount we sent.
+
+| JazzCash says | Row becomes | Shop sees |
+|---|---|---|
+| `000` | approved, one month granted | Dashboard |
+| `124` / `157` (still in progress) | stays pending | Waiting page, polls every few seconds |
+| any other signed code | failed, no month | "Did not go through", Try again / paste TID |
+| unsigned, wrong amount/merchant/ref | unchanged | Waiting page or Upgrade notice |
+
+`pending -> approved/failed/rejected` is a one-shot update shared by the
+return and the office Approve button, so a month is never granted twice.
+
+The return is a cross-site POST, so the login cookie (SameSite=Lax) is not
+sent. The handler never reads or writes the session; it redirects to
+`/billing/jazzcash/<id>`, and that GET carries the cookie.
+
+Rakhza office lists unconfirmed checkouts separately from pasted TIDs. Approve
+one only after finding that reference paid in the JazzCash merchant portal.
+The TID paste form stays on Upgrade for agents and failed checkouts.
+
+Still to do: server-to-server IPN listener and a status-inquiry job, so a
+checkout settles even if the shop's browser never comes back.

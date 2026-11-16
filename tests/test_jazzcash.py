@@ -97,18 +97,23 @@ def test_return_grants_month_on_000(client, app):
     }
     fields['pp_SecureHash'] = secure_hash(fields, 'SALT')
     r = client.post('/billing/jazzcash/return', data=fields)
-    assert r.status_code == 302
-    assert r.location.endswith('/dashboard')
+    assert r.status_code == 303
+    with app.app_context():
+        pid = Payment.query.filter_by(tid=tid).one().id
+    assert r.location.endswith(f'/billing/jazzcash/{pid}')
+    landed = client.get(r.location)
+    assert landed.status_code == 302 and landed.location.endswith('/dashboard')
     with app.app_context():
         p = Payment.query.filter_by(tid=tid).one()
         u = db.session.get(User, uid)
-        assert p.status == 'approved'
+        assert p.status == 'approved' and p.gateway_code == '000' and p.method == 'checkout'
         assert u.paid_until is not None
+        first_paid_until = u.paid_until
     again = client.post('/billing/jazzcash/return', data=fields)
-    assert again.status_code == 302
+    assert again.status_code == 303
     with app.app_context():
         assert Payment.query.filter_by(tid=tid).one().status == 'approved'
-        assert db.session.get(User, uid).paid_until is not None
+        assert db.session.get(User, uid).paid_until == first_paid_until  # no second month
 
 
 def test_return_bad_hash_stays_pending(client, app):
@@ -127,7 +132,7 @@ def test_return_bad_hash_stays_pending(client, app):
         'pp_ResponseCode': '000',
         'pp_SecureHash': '00' * 32,
     })
-    assert r.status_code == 302
+    assert r.status_code == 303 and '/billing/jazzcash/' in r.location
     with app.app_context():
         p = Payment.query.one()
         assert p.status == 'pending'

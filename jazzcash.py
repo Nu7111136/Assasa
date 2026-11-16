@@ -4,6 +4,7 @@ from __future__ import annotations
 import hmac
 import hashlib
 import os
+import re
 from datetime import datetime, timedelta
 from urllib.parse import urljoin
 from zoneinfo import ZoneInfo
@@ -62,6 +63,48 @@ def secure_hash(fields: dict, salt: str) -> str:
 def hash_ok(fields: dict, salt: str, given: str) -> bool:
     expected = secure_hash(fields, salt)
     return hmac.compare_digest(expected, (given or '').strip().upper())
+
+
+SUCCESS_CODE = '000'
+# Codes JazzCash uses for "not finished yet" (customer still approving, voucher
+# awaiting cash). Keep the row pending; the status page keeps waiting.
+# Confirm this list against the integration guide that comes with live keys.
+PENDING_CODES = frozenset({'124', '157'})
+TXN_REF_RE = re.compile(r'T[0-9]{18}')
+
+
+def verify_return(posted: dict, payment, config) -> tuple[str, str]:
+    """Decide what a JazzCash return/notification means for `payment`.
+
+    Returns (outcome, reason). outcome is one of:
+      'approve'  signed, our merchant, our ref, exact amount, code 000
+      'decline'  signed and ours, but JazzCash says it did not go through
+      'pending'  signed and ours, JazzCash says still in progress
+      'invalid'  anything we cannot trust; change nothing
+    """
+    salt = (config.get('JAZZCASH_INTEGRITY_SALT') or '').strip()
+    if payment is None:
+        return 'invalid', 'unknown_ref'
+    if not salt:
+        return 'invalid', 'no_salt'
+    if not hash_ok(posted, salt, posted.get('pp_SecureHash', '')):
+        return 'invalid', 'bad_hash'
+    if (posted.get('pp_TxnRefNo') or '').strip() != payment.tid:
+        return 'invalid', 'ref_mismatch'
+    merchant = (config.get('JAZZCASH_MERCHANT_ID') or '').strip()
+    if (posted.get('pp_MerchantID') or '').strip() != merchant:
+        return 'invalid', 'merchant_mismatch'
+    code = (posted.get('pp_ResponseCode') or '').strip()
+    if code == SUCCESS_CODE:
+        raw = (posted.get('pp_Amount') or '').strip()
+        if not raw.isdigit() or int(raw) != int(payment.amount or 0) * 100:
+            return 'invalid', 'amount_mismatch'
+        return 'approve', 'ok'
+    if code in PENDING_CODES:
+        return 'pending', 'in_progress'
+    if code:
+        return 'decline', 'declined'
+    return 'invalid', 'no_code'
 
 
 def txn_ref(when: datetime, user_id: int) -> str:

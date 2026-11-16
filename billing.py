@@ -82,6 +82,17 @@ def is_test_tid(tid):
     return str(tid or '').upper().startswith('TEST-SIM-')
 
 
+def payment_kind(payment):
+    """'tid', 'checkout' or 'test'. Older rows have no method; infer from the ID."""
+    if payment.method:
+        return payment.method
+    if is_test_tid(payment.tid):
+        return 'test'
+    if jazzcash.TXN_REF_RE.fullmatch(payment.tid or ''):
+        return 'checkout'
+    return 'tid'
+
+
 def shop_bucket(user, at_time):
     if is_paid_at(user.paid_until, at_time) or remaining_seconds(user.trial_ends_at, at_time) > 0:
         return 'active'
@@ -158,7 +169,8 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
         # Expired accounts are routed to payment, not a read-only dashboard.
         # Static/PWA assets and language switching must still work on Upgrade.
         allowed = {'upgrade', 'logout', 'login', 'forgot_password', 'test_mode', 'simulate_payment',
-                   'jazzcash_pay', 'jazzcash_return', 'static', 'sw', 'switch_language'}
+                   'jazzcash_pay', 'jazzcash_return', 'jazzcash_wait', 'jazzcash_state',
+                   'static', 'sw', 'switch_language'}
         if g.is_admin:
             allowed.update({'admin_home', 'admin_payments', 'review_payment', 'admin_recon'})
         if g.user:
@@ -183,7 +195,8 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
                     is_tester=getattr(g,'is_tester',False), test_mode=getattr(g,'test_mode',False), tester_day=session.get('tester_day',0),
                     jazzcash=app.config['PAYMENT_JAZZCASH_NUMBER'],
                     jazzcash_checkout=jazzcash.configured(app.config),
-                    jazzcash_rupees=jazzcash.amount_paisa(app.config) // 100,
+                    jazzcash_rupees=max(1, jazzcash.amount_paisa(app.config) // 100),
+                    payment_kind=payment_kind,
                     paid_end=pkt_label(user.paid_until) if user else '')
 
     @app.post('/test-mode')
@@ -212,10 +225,12 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
             return redirect(url_for('login'))
         if request.method == 'POST':
             tid = request.form.get('tid','').strip().upper()
-            if not re.fullmatch(r'[A-Z0-9-]{5,64}', tid):
+            # Checkout refs (T + 18 digits) belong to the gateway; a pasted one would
+            # look like a checkout row in the office and could block a real checkout.
+            if not re.fullmatch(r'[A-Z0-9-]{5,64}', tid) or jazzcash.TXN_REF_RE.fullmatch(tid):
                 flash('درست ٹرانزیکشن آئی ڈی درج کریں۔' if g.lang=='ur' else 'Enter a valid transaction ID (5–64 letters, digits or hyphens).')
                 return render_template('upgrade.html', payments=[]), 400
-            db.session.add(Payment(user_id=g.user.id, tid=tid, created_at=now(), amount=299))
+            db.session.add(Payment(user_id=g.user.id, tid=tid, created_at=now(), amount=299, method='tid'))
             try:
                 db.session.commit()
             except IntegrityError:
@@ -237,7 +252,7 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
             abort(403)
         tid = f"TEST-SIM-{g.user.id}-{now().strftime('%Y%m%d%H%M%S')}-{secrets.token_hex(3).upper()}"
         payment = Payment(user_id=g.user.id, tid=tid, created_at=now(), amount=299,
-                          status='approved', reviewed_at=now(), reviewed_by=g.user.id)
+                          status='approved', reviewed_at=now(), reviewed_by=g.user.id, method='test')
         db.session.add(payment)
         grant_month(g.user, now())
         db.session.commit()
@@ -254,14 +269,16 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
         if not jazzcash.configured(app.config):
             abort(404)
         when = now()
-        paisa = jazzcash.amount_paisa(app.config)
-        rupees = max(1, paisa // 100)
+        # Whole rupees only, so the stored amount and the signed pp_Amount always agree
+        # and the return check can compare them exactly.
+        rupees = max(1, jazzcash.amount_paisa(app.config) // 100)
         fields = jazzcash.checkout_fields(
             app.config, user_id=g.user.id, when=when,
             return_url=jazzcash.return_url_for(app.config, request),
-            amount_paisa_value=paisa,
+            amount_paisa_value=rupees * 100,
         )
-        payment = Payment(user_id=g.user.id, tid=fields['pp_TxnRefNo'], created_at=when, amount=rupees)
+        payment = Payment(user_id=g.user.id, tid=fields['pp_TxnRefNo'], created_at=when, amount=rupees,
+                          method='checkout')
         db.session.add(payment)
         try:
             db.session.commit()
@@ -276,38 +293,82 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
             fields=fields,
         )
 
+    def settle(payment_id, status, *, reviewer=None, code=None):
+        """One-shot pending -> approved/rejected/failed. Grants a month only for the
+        caller that actually flipped the row, so a browser return, a JazzCash
+        notification and an admin click arriving together cannot grant twice."""
+        values = dict(status=status, reviewed_at=now(), reviewed_by=reviewer)
+        if code is not None:
+            values['gateway_code'] = code[:8]
+        changed = Payment.query.filter_by(id=payment_id, status='pending').update(values)
+        if changed != 1:
+            db.session.rollback()
+            return False
+        if status == 'approved':
+            payment = db.session.get(Payment, payment_id)
+            owner = db.session.get(User, payment.user_id)
+            if owner:
+                grant_month(owner, now())
+        db.session.commit()
+        return True
+
+    def ur():
+        return session.get('lang') == 'ur'
+
     @app.route('/billing/jazzcash/return', methods=['GET', 'POST'])
     def jazzcash_return():
+        # JazzCash POSTs here cross-site, so the SameSite=Lax session cookie is
+        # usually NOT sent. Settle from the signed fields alone, never touch the
+        # session (writing it would replace the shop's login cookie), then hand
+        # off with a GET redirect, which does carry the cookie.
         posted = {k: v for k, v in request.values.items() if k.startswith('pp_')}
         tid = (posted.get('pp_TxnRefNo') or '').strip()
         code = (posted.get('pp_ResponseCode') or '').strip()
-        salt = app.config['JAZZCASH_INTEGRITY_SALT']
         payment = Payment.query.filter_by(tid=tid).first() if tid else None
-        ok = bool(payment and salt and jazzcash.hash_ok(posted, salt, posted.get('pp_SecureHash', '')))
-        log.info(
-            'jazzcash return tid=%s code=%s hash_ok=%s payment=%s',
-            tid, code, ok, payment.id if payment else None,
-        )
-        if payment and payment.status == 'approved':
-            return redirect(url_for('dashboard' if g.user else 'login'))
-        if ok and code == '000':
-            owner = db.session.get(User, payment.user_id)
-            payment.status = 'approved'
-            payment.reviewed_at = now()
-            if owner:
-                grant_month(owner, now())
+        if payment is not None and payment_kind(payment) != 'checkout':
+            payment = None  # never let a gateway return touch a pasted-TID or test row
+        outcome, reason = jazzcash.verify_return(posted, payment, app.config)
+        log.info('jazzcash return tid=%s code=%s outcome=%s reason=%s payment=%s',
+                 tid, code, outcome, reason, payment.id if payment else None)
+        if outcome == 'approve':
+            if settle(payment.id, 'approved', code=code):
+                log.info('jazzcash approved pid=%s user=%s', payment.id, payment.user_id)
+        elif outcome == 'decline':
+            if settle(payment.id, 'failed', code=code):
+                log.info('jazzcash failed pid=%s code=%s', payment.id, code)
+        elif outcome == 'pending' and payment.status == 'pending':
+            payment.gateway_code = code[:8]
             db.session.commit()
-            flash('ادائیگی ہو گئی۔ ایک مہینہ کھل گیا۔' if session.get('lang') == 'ur'
-                  else 'Payment received. One month is now active.', 'ok')
-            return redirect(url_for('dashboard' if g.user else 'login'))
-        if payment and payment.status == 'pending' and code and code != '000':
-            log.info('jazzcash declined tid=%s code=%s', tid, code)
-        flash('JazzCash ادائیگی مکمل نہیں ہوئی۔ TID سے جمع کر سکتے ہیں۔' if session.get('lang') == 'ur'
-              else 'JazzCash did not confirm this payment. You can submit a TID instead.')
-        return redirect(url_for('upgrade' if g.user else 'login'))
+        if payment is not None:
+            return redirect(url_for('jazzcash_wait', pid=payment.id), code=303)
+        return redirect(url_for('upgrade', jc='unconfirmed'), code=303)
 
     if csrf is not None:
         csrf.exempt(jazzcash_return)
+
+    def own_checkout(pid):
+        payment = db.session.get(Payment, pid)
+        if not payment or payment.user_id != g.user.id or payment_kind(payment) != 'checkout':
+            abort(404)
+        return payment
+
+    @app.get('/billing/jazzcash/<int:pid>')
+    def jazzcash_wait(pid):
+        if not g.user:
+            return redirect(url_for('login'))
+        payment = own_checkout(pid)
+        if payment.status == 'approved':
+            flash('ادائیگی ہو گئی۔ ایک مہینہ کھل گیا۔' if ur()
+                  else 'Payment received. One month is now active.', 'ok')
+            return redirect(url_for('dashboard'))
+        return render_template('jazzcash_wait.html', payment=payment)
+
+    @app.get('/billing/jazzcash/<int:pid>/state')
+    def jazzcash_state(pid):
+        if not g.user:
+            abort(401)
+        payment = own_checkout(pid)
+        return dict(status=payment.status, done=url_for('dashboard'))
 
     def _admin_gate():
         if not g.user:
@@ -328,10 +389,14 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
     def _money_split(rows):
         pending = live = test = 0
         n_pending = n_approved = n_rejected = n_test = n_live = 0
+        n_checkout_open = 0
         for payment, _owner in rows:
             amount = payment.amount or 0
-            test_row = is_test_tid(payment.tid)
-            if payment.status == 'pending':
+            test_row = payment_kind(payment) == 'test'
+            if payment.status == 'pending' and payment_kind(payment) == 'checkout':
+                # Opened JazzCash but no confirmation yet; often abandoned. Not a receipt.
+                n_checkout_open += 1
+            elif payment.status == 'pending':
                 pending += amount
                 n_pending += 1
             elif payment.status == 'approved':
@@ -345,7 +410,16 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
             elif payment.status == 'rejected':
                 n_rejected += 1
         return dict(pending=pending, live=live, test=test, n_pending=n_pending,
-                    n_approved=n_approved, n_rejected=n_rejected, n_test=n_test, n_live=n_live)
+                    n_approved=n_approved, n_rejected=n_rejected, n_test=n_test, n_live=n_live,
+                    n_checkout_open=n_checkout_open)
+
+    def _pending_split():
+        """Pasted TIDs (the admin's daily queue) vs unconfirmed gateway checkouts."""
+        rows = db.session.query(Payment, User).join(User, Payment.user_id == User.id).filter(
+            Payment.status == 'pending').order_by(Payment.id).all()
+        receipts = [r for r in rows if payment_kind(r[0]) != 'checkout']
+        checkouts = [r for r in rows if payment_kind(r[0]) == 'checkout']
+        return receipts, checkouts
 
     @app.get('/admin')
     def admin_home():
@@ -367,8 +441,7 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
             ))
         period_rows = _payments_in_window(start, end)
         money = _money_split(period_rows)
-        pending_rows = db.session.query(Payment, User).join(User, Payment.user_id == User.id).filter(
-            Payment.status == 'pending').order_by(Payment.id).all()
+        pending_rows, checkout_rows = _pending_split()
         recon = None
         if ReconNote is not None:
             recon = ReconNote.query.order_by(ReconNote.id.desc()).first()
@@ -377,7 +450,7 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
         log.info('admin home user=%s range=%s shops=%s pending=%s', g.user.id, kind, len(shops), money['n_pending'])
         return render_template(
             'admin.html', shops=shop_rows, buckets=buckets, registered=len(shops),
-            money=money, period_rows=period_rows, pending_rows=pending_rows,
+            money=money, period_rows=period_rows, pending_rows=pending_rows, checkout_rows=checkout_rows,
             range_kind=kind, range_start=pkt_label(start), range_end=pkt_label(end),
             date_from=pkt(start).date().isoformat(), date_to=pkt(end).date().isoformat(),
             recon=recon, wallet=wallet, is_test_tid=is_test_tid, pkt_label=pkt_label,
@@ -409,26 +482,23 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
     def admin_payments():
         if not g.user: return redirect(url_for('login'))
         if not g.is_admin: abort(403)
-        rows = db.session.query(Payment, User).join(User, Payment.user_id == User.id).filter(Payment.status=='pending').order_by(Payment.id).all()
+        rows, checkout_rows = _pending_split()
         wallet = db.session.scalar(db.select(func.coalesce(func.sum(Payment.amount), 0)).where(Payment.status == 'approved')) or 0
-        return render_template('payments.html', rows=rows, wallet=wallet)
+        return render_template('payments.html', rows=rows, checkout_rows=checkout_rows, wallet=wallet,
+                               pkt_label=pkt_label)
 
     @app.post('/admin/payments/<int:pid>/<action>')
     def review_payment(pid, action):
         if not g.user or not g.is_admin: abort(403)
         if action not in ('approve','reject'): abort(404)
-        # Atomic status claim: repeated/concurrent approvals cannot grant twice.
+        # Atomic status claim: repeated/concurrent approvals (or a JazzCash return
+        # landing at the same moment) cannot grant twice.
         status = 'approved' if action == 'approve' else 'rejected'
-        changed = Payment.query.filter_by(id=pid,status='pending').update(dict(status=status,reviewed_at=now(),reviewed_by=g.user.id))
-        if changed != 1:
-            db.session.rollback()
+        if not settle(pid, status, reviewer=g.user.id):
             abort(409, 'Payment already reviewed or not found')
-        payment = db.session.get(Payment,pid)
-        if action == 'approve':
-            owner = db.session.get(User,payment.user_id)
-            grant_month(owner, now())
-        db.session.commit()
-        log.info('payment %s pid=%s user=%s by=%s', action, pid, payment.user_id, g.user.id)
+        payment = db.session.get(Payment, pid)
+        log.info('payment %s pid=%s user=%s by=%s kind=%s', action, pid, payment.user_id, g.user.id,
+                 payment_kind(payment))
         if request.form.get('next') == 'office':
             return redirect(url_for('admin_home'))
         return redirect(url_for('admin_payments'))
@@ -449,6 +519,13 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
                 if 'trade' not in cols:
                     column_type = User.__table__.c.trade.type.compile(dialect=db.engine.dialect)
                     conn.execute(text(f'ALTER TABLE "user" ADD COLUMN trade {column_type}'))
+        if inspector.has_table('payment'):
+            pay_cols = {c['name'] for c in inspector.get_columns('payment')}
+            with db.engine.begin() as conn:
+                for name in ('method', 'gateway_code'):
+                    if name not in pay_cols:
+                        column_type = Payment.__table__.c[name].type.compile(dialect=db.engine.dialect)
+                        conn.execute(text(f'ALTER TABLE payment ADD COLUMN {name} {column_type}'))
         if inspector.has_table('item'):
             item_cols = {c['name'] for c in inspector.get_columns('item')}
             if 'notebook_id' not in item_cols:

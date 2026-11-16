@@ -94,6 +94,11 @@ class Payment(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False)
     reviewed_at = db.Column(db.DateTime(timezone=True))
     reviewed_by = db.Column(db.Integer, db.ForeignKey('user.id'))
+    # 'tid' (pasted receipt), 'checkout' (JazzCash gateway), 'test' (tester simulate).
+    # NULL on rows created before this column existed; see billing.payment_kind().
+    method = db.Column(db.String(12))
+    # Last pp_ResponseCode JazzCash sent for a checkout row.
+    gateway_code = db.Column(db.String(8))
 
 
 class Item(db.Model):
@@ -173,6 +178,7 @@ def create_app(config=None):
             'stock_move': 'inventory',
             'stock_pick': 'inventory',
             'notebook_new': 'inventory',
+            'jazzcash_wait': 'upgrade',
         }.get(request.endpoint)
         return dict(t=g.t, lang=g.lang, back_href=url_for(dest) if dest else '')
 
@@ -220,6 +226,8 @@ def create_app(config=None):
         page = request.args.get('page', 'signup')
         allowed = ('signup', 'login', 'forgot_password', 'dashboard', 'upgrade', 'admin_home', 'admin_payments',
                    'inventory', 'inventory_new', 'inventory_item', 'stock_move', 'stock_pick', 'notebook_new')
+        if page == 'jazzcash_wait':
+            page = 'upgrade'
         return redirect(url_for(page if page in allowed else 'signup'))
 
     @app.route('/', methods=['GET', 'POST'])

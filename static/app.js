@@ -524,3 +524,31 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').cat
     }
   }, true);
 })();
+
+(function jazzcashWait() {
+  // Waiting page after JazzCash: poll our own server (never JazzCash) until the
+  // payment leaves "pending", then reload so the server decides where to go.
+  const box = document.querySelector('[data-jc-state]');
+  if (!box) return;
+  const url = box.getAttribute('data-jc-state');
+  const slow = box.querySelector('.jc-slow');
+  const started = Date.now();
+  const SLOW_AFTER = 3 * 60 * 1000;
+  const STOP_AFTER = 15 * 60 * 1000;
+  async function tick() {
+    try {
+      const r = await fetch(url, { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } });
+      if (r.ok) {
+        const s = await r.json();
+        if (s.status && s.status !== 'pending') {
+          window.location.reload();
+          return;
+        }
+      }
+    } catch (e) { /* offline for a moment; keep trying */ }
+    const waited = Date.now() - started;
+    if (slow && waited > SLOW_AFTER) slow.hidden = false;
+    if (waited < STOP_AFTER) setTimeout(tick, waited > SLOW_AFTER ? 15000 : 4000);
+  }
+  setTimeout(tick, 2500);
+})();
