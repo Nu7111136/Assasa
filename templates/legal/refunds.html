@@ -1,0 +1,63 @@
+{% extends 'base.html' %}{% block content %}
+<article class="legal">
+{% include 'legal/_head.html' %}
+{% if lang == 'en' %}
+<p>This policy explains how cancelling and refunds work for Rakhza, sold by <strong>{{ biz.name }}</strong>.</p>
+
+<h2>1. Try before you pay</h2>
+<p>Every new account gets <strong>5 days free</strong>. No payment is taken for the trial, so you can decide whether Rakhza suits your shop before paying anything.</p>
+
+<h2>2. No automatic charges, cancel any time</h2>
+<p>Rakhza is <strong>Rs 299 for one calendar month</strong>, paid by you each month. We never charge you automatically. To cancel, simply do not pay for the next month; nothing else is needed. Your paid month keeps working until its end date.</p>
+
+<h2>3. When we refund</h2>
+<p>A month that has started is normally not refundable. We <strong>will</strong> refund you in full or in part when:</p>
+<ul>
+<li><strong>you paid twice</strong> for the same month by mistake, or paid more than Rs 299: we refund the extra;</li>
+<li><strong>money left your JazzCash</strong> but your month did not start, and we cannot start it for you;</li>
+<li><strong>Rakhza did not work</strong> for you because of a fault on our side for more than 3 days in a row during your paid month, and we could not fix it: we refund the unused days;</li>
+<li>we close your account without you breaking our <a href="{{ url_for('terms') }}">Terms</a>: we refund the unused days.</li>
+</ul>
+<p>If a JazzCash payment fails but money was deducted, JazzCash usually reverses it by itself. If it has not come back within 3 working days, contact us.</p>
+
+<h2>4. How to ask for a refund</h2>
+<ol>
+<li>Contact us within <strong>7 days</strong> of the payment, from your registered mobile number.</li>
+<li>Tell us the transaction ID (TID) or JazzCash reference and the date. Never send your PIN or OTP.</li>
+<li>We reply within <strong>3 working days</strong>. If the refund is approved, we send it back to the JazzCash account it came from within <strong>7 working days</strong>.</li>
+</ol>
+
+<h2>5. Contact</h2>
+{% include 'legal/_contact_block.html' %}
+
+{% else %}
+<p>یہ پالیسی بتاتی ہے کہ <strong>{{ biz.name }}</strong> کی جانب سے رکھزا میں منسوخی اور رقم کی واپسی کیسے ہوتی ہے۔</p>
+
+<h2>1۔ ادائیگی سے پہلے آزمائیں</h2>
+<p>ہر نئے اکاؤنٹ کو <strong>5 دن مفت</strong> ملتے ہیں۔ آزمائش کی کوئی رقم نہیں لی جاتی، اس لیے کچھ ادا کرنے سے پہلے آپ دیکھ سکتے ہیں کہ رکھزا آپ کی دکان کے لیے مناسب ہے یا نہیں۔</p>
+
+<h2>2۔ کوئی خودکار کٹوتی نہیں، کسی بھی وقت منسوخ کریں</h2>
+<p>رکھزا کی قیمت <strong>ایک کیلنڈر مہینے کے 299 روپے</strong> ہے، جو آپ ہر مہینے خود ادا کرتے ہیں۔ ہم کبھی خودکار طور پر رقم نہیں کاٹتے۔ منسوخ کرنے کے لیے بس اگلے مہینے کی ادائیگی نہ کریں؛ اور کچھ کرنے کی ضرورت نہیں۔ ادا شدہ مہینہ اپنی آخری تاریخ تک چلتا رہے گا۔</p>
+
+<h2>3۔ رقم کب واپس ہوگی</h2>
+<p>شروع ہو چکا مہینہ عام طور پر واپس نہیں ہوتا۔ ان صورتوں میں ہم پوری یا کچھ رقم <strong>ضرور</strong> واپس کریں گے:</p>
+<ul>
+<li>آپ نے غلطی سے ایک ہی مہینے کی <strong>دو بار ادائیگی</strong> کی، یا 299 روپے سے زیادہ بھیجے: زائد رقم واپس؛</li>
+<li>آپ کے JazzCash سے <strong>رقم کٹ گئی</strong> مگر مہینہ شروع نہیں ہوا، اور ہم اسے شروع نہ کر سکے؛</li>
+<li>ادا شدہ مہینے میں ہماری خرابی کی وجہ سے <strong>رکھزا مسلسل 3 دن سے زیادہ نہ چلی</strong> اور ہم ٹھیک نہ کر سکے: باقی دنوں کی رقم واپس؛</li>
+<li>آپ کے <a href="{{ url_for('terms') }}">شرائط</a> توڑے بغیر ہم نے آپ کا اکاؤنٹ بند کیا: باقی دنوں کی رقم واپس۔</li>
+</ul>
+<p>اگر JazzCash ادائیگی ناکام ہو مگر رقم کٹ جائے تو عام طور پر JazzCash خود واپس کر دیتا ہے۔ 3 کاروباری دن میں واپس نہ آئے تو ہم سے رابطہ کریں۔</p>
+
+<h2>4۔ واپسی کی درخواست کیسے کریں</h2>
+<ol>
+<li>ادائیگی کے <strong>7 دن</strong> کے اندر اپنے رجسٹرڈ موبائل نمبر سے رابطہ کریں۔</li>
+<li>ٹرانزیکشن آئی ڈی (TID) یا JazzCash ریفرنس اور تاریخ بتائیں۔ پن یا او ٹی پی کبھی نہ بھیجیں۔</li>
+<li>ہم <strong>3 کاروباری دن</strong> میں جواب دیں گے۔ واپسی منظور ہو تو رقم <strong>7 کاروباری دن</strong> میں اسی JazzCash اکاؤنٹ میں بھیج دی جائے گی جس سے آئی تھی۔</li>
+</ol>
+
+<h2>5۔ رابطہ</h2>
+{% include 'legal/_contact_block.html' %}
+{% endif %}
+</article>
+{% endblock %}

@@ -112,7 +112,7 @@ customer data are included in this package.
 
 NZ's original `static/style.css` is retained byte-for-byte at the beginning; new
 rules are appended and use his `--navy` variable. CSS version is `trial-2`, service
-worker cache is `rakhza-shell-ui-31`. Private pages remain network-only/no-store.
+worker cache is `rakhza-shell-ui-32`. Private pages remain network-only/no-store.
 
 **Existing installations: back up the DB first**, then from the app directory:
 

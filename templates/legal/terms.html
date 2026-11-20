@@ -1,0 +1,135 @@
+{% extends 'base.html' %}{% block content %}
+<article class="legal">
+{% include 'legal/_head.html' %}
+{% if lang == 'en' %}
+<p>These terms are an agreement between you and <strong>{{ biz.name }}</strong> ("Rakhza", "we", "us") for using the Rakhza app at rakhza.digital. By creating an account or using Rakhza you accept them. If you do not agree, please do not use Rakhza.</p>
+
+<h2>1. What Rakhza is</h2>
+<p>Rakhza is an online stock notebook for small shops and trades in Pakistan. It lets you keep a list of your items, their units, prices and quantities, and record stock coming in and going out. It runs in a web browser and can be added to your phone's home screen.</p>
+
+<h2>2. Your account</h2>
+<ul>
+<li>You sign up with your name, your mobile number, your type of business and a 6-digit MPIN. One mobile number is one shop account.</li>
+<li>The information you give must be true, and the mobile number must be yours.</li>
+<li>Keep your MPIN secret. Do not use your JazzCash or bank MPIN. You are responsible for what happens in your account.</li>
+<li>If you forget your MPIN, contact us from your registered number and we will reset it after checking it is you.</li>
+<li>You must be at least 18 years old, or legally able to make a contract in Pakistan.</li>
+</ul>
+
+<h2>3. Free trial and price</h2>
+<ul>
+<li>Every new account gets <strong>5 days (120 hours) free</strong>, once per account. No payment is needed for the trial.</li>
+<li>After the trial, Rakhza costs <strong>Rs 299 for one calendar month</strong>. A month runs from the day your payment is confirmed to the same date next month (or the last day of a shorter month).</li>
+<li><strong>There are no automatic charges.</strong> We never debit your account by ourselves. You choose to pay each month.</li>
+<li>If you pay again while your month is still running, the new month is added after the current one.</li>
+<li>When the trial or paid month ends and you have not paid, your stock stays saved but you will be asked to pay before you can use the app again.</li>
+<li>We may change the price in future. We will show the new price in the app before it applies; it never changes a month you have already paid for.</li>
+</ul>
+
+<h2>4. How payment works</h2>
+<ul>
+<li>You can pay through <strong>JazzCash checkout</strong> in the app, or by sending Rs 299 to our JazzCash number and entering the transaction ID (TID) from your receipt.</li>
+<li>JazzCash processes the payment. We never ask for, see or store your JazzCash PIN, OTP or card details. Never type them into Rakhza.</li>
+<li>A TID is checked by us before your month starts. Submitting a false or someone else's TID is not allowed and can lead to your account being closed.</li>
+<li>Refunds are covered by our <a href="{{ url_for('refunds') }}">Refund and Cancellation Policy</a>.</li>
+</ul>
+
+<h2>5. Your data</h2>
+<p>Your stock records belong to you. We use them only to run Rakhza for you, as explained in our <a href="{{ url_for('privacy') }}">Privacy Policy</a>. We do not sell your data.</p>
+
+<h2>6. Fair use</h2>
+<p>You agree not to:</p>
+<ul>
+<li>use Rakhza for anything illegal under the laws of Pakistan, including recording illegal goods;</li>
+<li>try to get into other people's accounts, attack, overload or copy the service, or use bots or scrapers on it;</li>
+<li>sell or rent your Rakhza account to others.</li>
+</ul>
+
+<h2>7. Availability</h2>
+<p>We work to keep Rakhza running and your data safe, but we cannot promise it will always be available or free of mistakes. It needs an internet connection. We may pause it for maintenance. Keep your own record of anything that is very important to your business.</p>
+
+<h2>8. Responsibility</h2>
+<p>Rakhza is a record-keeping tool. Business decisions you make using it are your own. As far as the law allows, we are not responsible for indirect losses such as lost sales or profit, and our total responsibility to you is limited to the amount you paid us for the current month. Nothing in these terms removes rights you have under Pakistani consumer protection law.</p>
+
+<h2>9. Ending your use</h2>
+<ul>
+<li>You can stop at any time by simply not paying for the next month. To have your account and data deleted, contact us.</li>
+<li>We may suspend or close an account that breaks these terms, for example by misusing payments. Where reasonable we will tell you first.</li>
+</ul>
+
+<h2>10. Changes to these terms</h2>
+<p>We may update these terms. The date at the top shows the latest version. If a change is important, we will show a notice in the app. Using Rakhza after a change means you accept the new terms.</p>
+
+<h2>11. Law</h2>
+<p>These terms are governed by the laws of Pakistan, and the courts of Pakistan have jurisdiction.</p>
+
+<h2>12. Contact</h2>
+{% include 'legal/_contact_block.html' %}
+
+{% else %}
+<p>یہ شرائط آپ اور <strong>{{ biz.name }}</strong> ("رکھزا"، "ہم") کے درمیان rakhza.digital پر رکھزا ایپ استعمال کرنے کا معاہدہ ہیں۔ اکاؤنٹ بنا کر یا رکھزا استعمال کر کے آپ انہیں قبول کرتے ہیں۔ اگر آپ متفق نہیں تو رکھزا استعمال نہ کریں۔</p>
+
+<h2>1۔ رکھزا کیا ہے</h2>
+<p>رکھزا پاکستان کی چھوٹی دکانوں اور کاروبار کے لیے آن لائن اسٹاک کاپی ہے۔ اس میں آپ اپنی اشیاء، ان کی اکائی، قیمت اور تعداد لکھ سکتے ہیں اور آنے جانے والا مال درج کر سکتے ہیں۔ یہ براؤزر میں چلتی ہے اور فون کی ہوم اسکرین پر لگائی جا سکتی ہے۔</p>
+
+<h2>2۔ آپ کا اکاؤنٹ</h2>
+<ul>
+<li>آپ اپنے نام، موبائل نمبر، کاروبار کی قسم اور چھ ہندسوں کے ایم پن سے اکاؤنٹ بناتے ہیں۔ ایک موبائل نمبر ایک دکان کا اکاؤنٹ ہے۔</li>
+<li>دی گئی معلومات درست ہوں اور موبائل نمبر آپ کا اپنا ہو۔</li>
+<li>اپنا ایم پن کسی کو نہ بتائیں۔ JazzCash یا بینک کا ایم پن استعمال نہ کریں۔ اکاؤنٹ میں ہونے والے کام کی ذمہ داری آپ کی ہے۔</li>
+<li>ایم پن بھول جائیں تو رجسٹرڈ نمبر سے ہم سے رابطہ کریں؛ تصدیق کے بعد ہم نیا ایم پن لگا دیں گے۔</li>
+<li>آپ کی عمر کم از کم 18 سال ہو، یا پاکستان کے قانون کے مطابق معاہدہ کرنے کے اہل ہوں۔</li>
+</ul>
+
+<h2>3۔ مفت آزمائش اور قیمت</h2>
+<ul>
+<li>ہر نئے اکاؤنٹ کو ایک بار <strong>5 دن (120 گھنٹے) مفت</strong> ملتے ہیں۔ آزمائش کے لیے کوئی ادائیگی نہیں۔</li>
+<li>آزمائش کے بعد رکھزا کی قیمت <strong>ایک کیلنڈر مہینے کے 299 روپے</strong> ہے۔ مہینہ ادائیگی کی تصدیق کے دن سے اگلے مہینے کی اسی تاریخ تک چلتا ہے (چھوٹے مہینے میں آخری دن تک)۔</li>
+<li><strong>کوئی خودکار کٹوتی نہیں۔</strong> ہم خود کبھی آپ کے اکاؤنٹ سے رقم نہیں کاٹتے۔ ہر مہینے ادائیگی آپ کی مرضی ہے۔</li>
+<li>مہینہ ختم ہونے سے پہلے دوبارہ ادائیگی کریں تو نیا مہینہ موجودہ مہینے کے بعد جڑ جاتا ہے۔</li>
+<li>آزمائش یا ادا شدہ مہینہ ختم ہو اور ادائیگی نہ ہو تو آپ کا اسٹاک محفوظ رہتا ہے، مگر دوبارہ استعمال سے پہلے ادائیگی کا کہا جائے گا۔</li>
+<li>ہم آئندہ قیمت بدل سکتے ہیں۔ نئی قیمت لاگو ہونے سے پہلے ایپ میں دکھائی جائے گی؛ ادا شدہ مہینے پر کوئی اثر نہیں ہوگا۔</li>
+</ul>
+
+<h2>4۔ ادائیگی کا طریقہ</h2>
+<ul>
+<li>آپ ایپ میں <strong>JazzCash چیک آؤٹ</strong> سے ادا کر سکتے ہیں، یا ہمارے JazzCash نمبر پر 299 روپے بھیج کر رسید کی ٹرانزیکشن آئی ڈی (TID) درج کر سکتے ہیں۔</li>
+<li>ادائیگی JazzCash کرتا ہے۔ ہم آپ کا JazzCash پن، او ٹی پی یا کارڈ کی معلومات نہ مانگتے ہیں، نہ دیکھتے ہیں، نہ محفوظ کرتے ہیں۔ انہیں رکھزا میں کبھی نہ لکھیں۔</li>
+<li>TID کی جانچ کے بعد مہینہ شروع ہوتا ہے۔ جھوٹی یا کسی اور کی TID جمع کرانا منع ہے اور اس پر اکاؤنٹ بند ہو سکتا ہے۔</li>
+<li>رقم کی واپسی ہماری <a href="{{ url_for('refunds') }}">واپسی اور منسوخی کی پالیسی</a> کے مطابق ہے۔</li>
+</ul>
+
+<h2>5۔ آپ کا ڈیٹا</h2>
+<p>آپ کا اسٹاک ریکارڈ آپ کا ہے۔ ہم اسے صرف آپ کے لیے رکھزا چلانے میں استعمال کرتے ہیں، جیسا کہ <a href="{{ url_for('privacy') }}">رازداری کی پالیسی</a> میں لکھا ہے۔ ہم آپ کا ڈیٹا فروخت نہیں کرتے۔</p>
+
+<h2>6۔ مناسب استعمال</h2>
+<p>آپ یہ نہیں کریں گے:</p>
+<ul>
+<li>پاکستان کے قانون کے خلاف کسی کام کے لیے رکھزا استعمال کرنا، بشمول غیر قانونی سامان کا ریکارڈ؛</li>
+<li>دوسروں کے اکاؤنٹ میں گھسنے، سروس پر حملہ کرنے، اسے بوجھل کرنے یا نقل کرنے کی کوشش، یا بوٹ اور اسکریپر چلانا؛</li>
+<li>اپنا رکھزا اکاؤنٹ کسی اور کو بیچنا یا کرائے پر دینا۔</li>
+</ul>
+
+<h2>7۔ دستیابی</h2>
+<p>ہم رکھزا کو چلتا رکھنے اور آپ کا ڈیٹا محفوظ رکھنے کی پوری کوشش کرتے ہیں، مگر یہ وعدہ نہیں کر سکتے کہ یہ ہمیشہ دستیاب اور غلطی سے پاک ہوگی۔ اس کے لیے انٹرنیٹ ضروری ہے۔ دیکھ بھال کے لیے اسے عارضی طور پر روکا جا سکتا ہے۔ کاروبار کی بہت اہم معلومات کا اپنا ریکارڈ بھی رکھیں۔</p>
+
+<h2>8۔ ذمہ داری</h2>
+<p>رکھزا ریکارڈ رکھنے کا ذریعہ ہے۔ اس کی مدد سے کیے گئے کاروباری فیصلے آپ کے اپنے ہیں۔ قانون کی حد تک ہم بالواسطہ نقصان جیسے فروخت یا منافع کے نقصان کے ذمہ دار نہیں، اور آپ کے لیے ہماری کل ذمہ داری موجودہ مہینے کی ادا کردہ رقم تک ہے۔ ان شرائط سے پاکستان کے صارف تحفظ کے قوانین کے تحت آپ کے حقوق ختم نہیں ہوتے۔</p>
+
+<h2>9۔ استعمال ختم کرنا</h2>
+<ul>
+<li>آپ کسی بھی وقت اگلے مہینے کی ادائیگی نہ کر کے رک سکتے ہیں۔ اکاؤنٹ اور ڈیٹا مٹوانے کے لیے ہم سے رابطہ کریں۔</li>
+<li>شرائط توڑنے والے اکاؤنٹ، مثلاً ادائیگی میں غلط استعمال، کو ہم معطل یا بند کر سکتے ہیں۔ جہاں ممکن ہو پہلے بتائیں گے۔</li>
+</ul>
+
+<h2>10۔ شرائط میں تبدیلی</h2>
+<p>ہم یہ شرائط بدل سکتے ہیں۔ اوپر کی تاریخ تازہ ترین نسخہ بتاتی ہے۔ اہم تبدیلی ہو تو ایپ میں اطلاع دیں گے۔ تبدیلی کے بعد رکھزا استعمال کرنے کا مطلب نئی شرائط قبول کرنا ہے۔</p>
+
+<h2>11۔ قانون</h2>
+<p>ان شرائط پر پاکستان کے قوانین لاگو ہیں اور پاکستان کی عدالتوں کو اختیار حاصل ہے۔</p>
+
+<h2>12۔ رابطہ</h2>
+{% include 'legal/_contact_block.html' %}
+{% endif %}
+</article>
+{% endblock %}

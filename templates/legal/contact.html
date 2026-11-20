@@ -1,0 +1,29 @@
+{% extends 'base.html' %}{% block content %}
+<article class="legal">
+{% include 'legal/_head.html' %}
+{% if lang == 'en' %}
+<p>Rakhza is an online stock notebook for small shops in Pakistan. We are happy to help with your account, payments or anything else.</p>
+{% include 'legal/_contact_block.html' %}
+
+<h2>Before you write</h2>
+<ul>
+<li><strong>Forgot MPIN:</strong> message us from the mobile number you signed up with. We will reset it after checking it is you.</li>
+<li><strong>Payment question or refund:</strong> include your transaction ID (TID) or JazzCash reference and the date. See our <a href="{{ url_for('refunds') }}">Refund Policy</a>.</li>
+<li><strong>Delete my account:</strong> message us from your registered number. See our <a href="{{ url_for('privacy') }}">Privacy Policy</a>.</li>
+</ul>
+<p class="notice"><strong>We will never ask for your JazzCash PIN, OTP or MPIN.</strong> Do not send them to anyone, including us.</p>
+
+{% else %}
+<p>رکھزا پاکستان کی چھوٹی دکانوں کے لیے آن لائن اسٹاک کاپی ہے۔ اکاؤنٹ، ادائیگی یا کسی بھی سوال میں ہم خوشی سے مدد کریں گے۔</p>
+{% include 'legal/_contact_block.html' %}
+
+<h2>لکھنے سے پہلے</h2>
+<ul>
+<li><strong>ایم پن بھول گئے:</strong> اسی موبائل نمبر سے پیغام بھیجیں جس سے اکاؤنٹ بنایا تھا۔ تصدیق کے بعد ہم نیا ایم پن لگا دیں گے۔</li>
+<li><strong>ادائیگی یا واپسی کا سوال:</strong> ٹرانزیکشن آئی ڈی (TID) یا JazzCash ریفرنس اور تاریخ لکھیں۔ ہماری <a href="{{ url_for('refunds') }}">واپسی کی پالیسی</a> دیکھیں۔</li>
+<li><strong>اکاؤنٹ مٹوانا:</strong> رجسٹرڈ نمبر سے پیغام بھیجیں۔ ہماری <a href="{{ url_for('privacy') }}">رازداری کی پالیسی</a> دیکھیں۔</li>
+</ul>
+<p class="notice"><strong>ہم کبھی آپ کا JazzCash پن، او ٹی پی یا ایم پن نہیں مانگیں گے۔</strong> یہ کسی کو نہ بھیجیں، ہمیں بھی نہیں۔</p>
+{% endif %}
+</article>
+{% endblock %}

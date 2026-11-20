@@ -1,0 +1,7 @@
+<ul class="legal-contact">
+<li><strong>{{ biz.name }}</strong>{% if biz.owner %} · {{ 'Owner' if lang=='en' else 'مالک' }}: {{ biz.owner }}{% endif %}</li>
+{% if biz.email %}<li>{{ 'Email' if lang=='en' else 'ای میل' }}: <a href="mailto:{{ biz.email }}"><bdi>{{ biz.email }}</bdi></a></li>{% endif %}
+{% if biz.phone %}<li>{{ 'Phone / WhatsApp' if lang=='en' else 'فون / واٹس ایپ' }}: <a href="tel:{{ biz.phone }}"><bdi>{{ biz.phone }}</bdi></a></li>{% endif %}
+{% if biz.address %}<li>{{ 'Address' if lang=='en' else 'پتہ' }}: {{ biz.address }}</li>{% endif %}
+<li>{{ 'Hours' if lang=='en' else 'اوقات' }}: <bdi>{{ biz.hours }}</bdi></li>
+</ul>

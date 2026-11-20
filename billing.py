@@ -173,7 +173,8 @@ def register_billing(app, db, User, Payment, now, ReconNote=None, csrf=None):
         # Static/PWA assets and language switching must still work on Upgrade.
         allowed = {'upgrade', 'logout', 'login', 'forgot_password', 'test_mode', 'simulate_payment',
                    'jazzcash_pay', 'jazzcash_return', 'jazzcash_ipn', 'jazzcash_wait', 'jazzcash_state',
-                   'static', 'sw', 'switch_language'}
+                   'static', 'sw', 'switch_language',
+                   'terms', 'privacy', 'refunds', 'contact'}
         if g.is_admin:
             allowed.update({'admin_home', 'admin_payments', 'review_payment', 'admin_recon'})
         if g.user:

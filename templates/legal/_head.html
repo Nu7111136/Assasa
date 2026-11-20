@@ -1,0 +1,4 @@
+<h1 class="hero-title">{{ heading }}</h1>
+<p class="legal-updated">{{ 'Last updated' if lang=='en' else 'آخری تبدیلی' }}: {{ updated }}</p>
+{% if is_admin and biz.missing %}<p class="flash error" role="alert">{{ 'Office only: these details are empty, so they are hidden from visitors. Add them to the vault:' if lang=='en' else 'صرف دفتر کے لیے: یہ معلومات خالی ہیں اس لیے ظاہر نہیں ہو رہیں۔ والٹ میں شامل کریں:' }} <bdi>{{ biz.missing|join(', ') }}</bdi></p>{% endif %}
+{% if lang=='ur' %}<p class="legal-note">اس صفحے کا انگریزی متن ہی حتمی ہے؛ اردو متن سہولت کے لیے ہے۔</p>{% endif %}

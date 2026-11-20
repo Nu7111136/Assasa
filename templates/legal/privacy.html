@@ -1,0 +1,117 @@
+{% extends 'base.html' %}{% block content %}
+<article class="legal">
+{% include 'legal/_head.html' %}
+{% if lang == 'en' %}
+<p>This policy explains what information <strong>{{ biz.name }}</strong> ("Rakhza", "we") collects when you use rakhza.digital, why, and what you can do about it. We collect as little as we need to run the app.</p>
+
+<h2>1. What we collect</h2>
+<ul>
+<li><strong>Account:</strong> your name, mobile number, type of business and chosen language.</li>
+<li><strong>MPIN:</strong> stored only as a one-way scrambled code (a hash). Nobody at Rakhza can read your MPIN.</li>
+<li><strong>Your stock records:</strong> item names, units, prices, quantities, notebooks, and the history of stock in and out.</li>
+<li><strong>Payments:</strong> the transaction ID or JazzCash reference, amount, date and status, and the response code JazzCash sends us. We do <strong>not</strong> receive or store your JazzCash PIN, OTP, card or wallet balance.</li>
+<li><strong>Technical:</strong> your IP address, browser type, the pages you open and the time, kept in our server logs for security and fixing problems. These logs never contain your MPIN or your stock entries.</li>
+</ul>
+<p>We do not ask for your CNIC, address or email to use Rakhza.</p>
+
+<h2>2. Why we use it</h2>
+<ul>
+<li>to create and run your account and show you your stock;</li>
+<li>to manage your free trial and paid months, and to check payments;</li>
+<li>to keep Rakhza safe, for example limiting repeated wrong MPIN attempts;</li>
+<li>to help you when you contact us, such as resetting your MPIN;</li>
+<li>to meet legal and accounting duties.</li>
+</ul>
+<p>We do not use your data for advertising, and we do not sell it.</p>
+
+<h2>3. Who we share it with</h2>
+<ul>
+<li><strong>JazzCash</strong> (Jazz / Mobilink Microfinance Bank), when you pay: the payment reference and amount needed to process and confirm it. JazzCash handles your payment under its own privacy terms.</li>
+<li><strong>Our hosting provider</strong>, which runs the servers where Rakhza and its database are stored.</li>
+<li><strong>Google Fonts:</strong> pages load fonts from Google, so your browser sends Google your IP address when loading them.</li>
+<li><strong>Authorities</strong>, only when Pakistani law requires us to.</li>
+</ul>
+
+<h2>4. Cookies</h2>
+<p>Rakhza uses one essential cookie to keep you logged in and remember your language. We do not use advertising or tracking cookies. If you block cookies, you cannot log in.</p>
+
+<h2>5. How we protect it</h2>
+<p>All traffic uses HTTPS encryption. MPINs are hashed. Access to the database is limited to the people who run Rakhza. Each shop can only see its own records. No system is perfectly safe, so keep your MPIN secret and tell us if you think someone used your account.</p>
+
+<h2>6. How long we keep it</h2>
+<ul>
+<li>Account and stock records: while your account exists.</li>
+<li>Payment records: as long as needed for our accounts and the law, even after an account is deleted.</li>
+<li>Server logs: for a limited time, then deleted.</li>
+</ul>
+
+<h2>7. Your choices and rights</h2>
+<p>You can ask us to show you the information we hold about you, correct it, or delete your account and stock records. Contact us from your registered mobile number so we can confirm it is you. We will act within 30 days. Payment records we must keep by law are not deleted.</p>
+
+<h2>8. Children</h2>
+<p>Rakhza is for shop owners and is not meant for anyone under 18.</p>
+
+<h2>9. Changes</h2>
+<p>If we change this policy, we will update the date at the top and, for important changes, show a notice in the app.</p>
+
+<h2>10. Contact</h2>
+{% include 'legal/_contact_block.html' %}
+
+{% else %}
+<p>یہ پالیسی بتاتی ہے کہ rakhza.digital استعمال کرتے وقت <strong>{{ biz.name }}</strong> ("رکھزا"، "ہم") کون سی معلومات لیتا ہے، کیوں لیتا ہے، اور آپ اس بارے میں کیا کر سکتے ہیں۔ ہم صرف اتنی معلومات لیتے ہیں جتنی ایپ چلانے کے لیے ضروری ہے۔</p>
+
+<h2>1۔ ہم کیا لیتے ہیں</h2>
+<ul>
+<li><strong>اکاؤنٹ:</strong> آپ کا نام، موبائل نمبر، کاروبار کی قسم اور منتخب زبان۔</li>
+<li><strong>ایم پن:</strong> صرف ایک ناقابلِ واپسی خفیہ کوڈ (ہیش) کی صورت میں محفوظ ہوتا ہے۔ رکھزا میں کوئی بھی آپ کا ایم پن نہیں پڑھ سکتا۔</li>
+<li><strong>اسٹاک ریکارڈ:</strong> اشیاء کے نام، اکائی، قیمت، تعداد، کاپیاں، اور آنے جانے والے مال کی تاریخ۔</li>
+<li><strong>ادائیگیاں:</strong> ٹرانزیکشن آئی ڈی یا JazzCash ریفرنس، رقم، تاریخ، حالت، اور JazzCash کا بھیجا ہوا جوابی کوڈ۔ ہم آپ کا JazzCash پن، او ٹی پی، کارڈ یا بیلنس <strong>نہیں</strong> لیتے اور نہ محفوظ کرتے ہیں۔</li>
+<li><strong>تکنیکی:</strong> آپ کا آئی پی ایڈریس، براؤزر کی قسم، کھولے گئے صفحات اور وقت، جو حفاظت اور خرابی دور کرنے کے لیے سرور لاگ میں رکھے جاتے ہیں۔ ان لاگز میں آپ کا ایم پن یا اسٹاک کی تفصیل کبھی درج نہیں ہوتی۔</li>
+</ul>
+<p>رکھزا استعمال کرنے کے لیے ہم شناختی کارڈ نمبر، پتہ یا ای میل نہیں مانگتے۔</p>
+
+<h2>2۔ ہم اسے کیوں استعمال کرتے ہیں</h2>
+<ul>
+<li>آپ کا اکاؤنٹ بنانے، چلانے اور آپ کو آپ کا اسٹاک دکھانے کے لیے؛</li>
+<li>مفت آزمائش اور ادا شدہ مہینوں کے انتظام اور ادائیگی کی جانچ کے لیے؛</li>
+<li>رکھزا کی حفاظت کے لیے، مثلاً بار بار غلط ایم پن کو روکنا؛</li>
+<li>رابطہ کرنے پر آپ کی مدد کے لیے، جیسے ایم پن تبدیل کرنا؛</li>
+<li>قانونی اور حسابی ذمہ داریاں پوری کرنے کے لیے۔</li>
+</ul>
+<p>ہم آپ کا ڈیٹا اشتہارات کے لیے استعمال نہیں کرتے اور نہ فروخت کرتے ہیں۔</p>
+
+<h2>3۔ ہم کس کے ساتھ شیئر کرتے ہیں</h2>
+<ul>
+<li><strong>JazzCash</strong> (جاز / موبی لنک مائیکروفنانس بینک)، جب آپ ادائیگی کریں: ادائیگی کا ریفرنس اور رقم جو اسے مکمل اور تصدیق کرنے کے لیے ضروری ہے۔ JazzCash اپنی رازداری کی شرائط کے تحت آپ کی ادائیگی سنبھالتا ہے۔</li>
+<li><strong>ہوسٹنگ فراہم کنندہ</strong>، جس کے سرور پر رکھزا اور اس کا ڈیٹا بیس چلتا ہے۔</li>
+<li><strong>گوگل فونٹس:</strong> صفحات گوگل سے فونٹ لیتے ہیں، اس لیے آپ کا براؤزر گوگل کو آپ کا آئی پی ایڈریس بھیجتا ہے۔</li>
+<li><strong>سرکاری ادارے</strong>، صرف جب پاکستان کا قانون تقاضا کرے۔</li>
+</ul>
+
+<h2>4۔ کوکیز</h2>
+<p>رکھزا صرف ایک ضروری کوکی استعمال کرتا ہے جو آپ کو لاگ ان رکھتی اور آپ کی زبان یاد رکھتی ہے۔ اشتہار یا نگرانی کی کوکیز استعمال نہیں ہوتیں۔ کوکیز بند کرنے پر لاگ ان نہیں ہو سکے گا۔</p>
+
+<h2>5۔ حفاظت</h2>
+<p>تمام رابطہ HTTPS سے خفیہ ہوتا ہے۔ ایم پن ہیش کی صورت میں ہیں۔ ڈیٹا بیس تک رسائی صرف رکھزا چلانے والوں کو ہے۔ ہر دکان صرف اپنا ریکارڈ دیکھ سکتی ہے۔ کوئی نظام مکمل محفوظ نہیں، اس لیے اپنا ایم پن خفیہ رکھیں اور شک ہو کہ کسی نے آپ کا اکاؤنٹ استعمال کیا ہے تو ہمیں بتائیں۔</p>
+
+<h2>6۔ ہم کب تک رکھتے ہیں</h2>
+<ul>
+<li>اکاؤنٹ اور اسٹاک ریکارڈ: جب تک آپ کا اکاؤنٹ موجود ہے۔</li>
+<li>ادائیگی کا ریکارڈ: جب تک ہمارے حساب اور قانون کے لیے ضروری ہو، اکاؤنٹ مٹنے کے بعد بھی۔</li>
+<li>سرور لاگ: محدود مدت کے لیے، پھر مٹا دیے جاتے ہیں۔</li>
+</ul>
+
+<h2>7۔ آپ کے اختیارات اور حقوق</h2>
+<p>آپ ہم سے کہہ سکتے ہیں کہ آپ کی معلومات دکھائیں، درست کریں، یا آپ کا اکاؤنٹ اور اسٹاک ریکارڈ مٹا دیں۔ اپنے رجسٹرڈ موبائل نمبر سے رابطہ کریں تاکہ ہم تصدیق کر سکیں۔ ہم 30 دن کے اندر کارروائی کریں گے۔ قانوناً ضروری ادائیگی کا ریکارڈ نہیں مٹایا جاتا۔</p>
+
+<h2>8۔ بچے</h2>
+<p>رکھزا دکان داروں کے لیے ہے، 18 سال سے کم عمر افراد کے لیے نہیں۔</p>
+
+<h2>9۔ تبدیلیاں</h2>
+<p>اس پالیسی میں تبدیلی پر اوپر کی تاریخ بدلی جائے گی، اور اہم تبدیلی ہو تو ایپ میں اطلاع دی جائے گی۔</p>
+
+<h2>10۔ رابطہ</h2>
+{% include 'legal/_contact_block.html' %}
+{% endif %}
+</article>
+{% endblock %}

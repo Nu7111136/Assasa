@@ -29,5 +29,5 @@
 {% if mode == 'login' %}<p class="switch"><a href="{{ url_for('forgot_password') }}">{{ t.forgot }}</a></p>{% endif %}
 {% if mode == 'forgot' %}<p class="switch"><a href="{{ url_for('login') }}">{{ t.login }}</a></p>
 {% else %}<p class="switch">{{ t.have if mode == 'signup' else t.new }} <a href="{{ url_for('login' if mode == 'signup' else 'signup') }}">{{ t.login if mode == 'signup' else t.signup }}</a></p>{% endif %}
-<p class="notice">{{ t.privacy }}</p>
+{% if mode == 'signup' %}<p class="notice">{{ t.privacy.format(terms='<a href="' ~ url_for('terms') ~ '">' ~ t.terms_link ~ '</a>', privacy='<a href="' ~ url_for('privacy') ~ '">' ~ t.privacy_link ~ '</a>')|safe }}</p>{% endif %}
 {% endblock %}
