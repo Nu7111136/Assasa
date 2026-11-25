@@ -12,7 +12,7 @@ PKT = ZoneInfo('Asia/Karachi')
 
 def _hash(salt, values):
     message = salt + ''.join('&' + v for v in values)
-    return hmac.new(salt.encode(), message.encode(), hashlib.sha256).hexdigest().upper()
+    return hmac.new(salt.encode(), message.encode(), hashlib.sha256).hexdigest()
 
 
 def test_secure_hash_matches_sorted_hmac():
@@ -21,7 +21,25 @@ def test_secure_hash_matches_sorted_hmac():
     expected = _hash(salt, ['000000000100', 'EN', 'MC1', 'pw'])
     assert secure_hash(fields, salt) == expected
     assert hash_ok(fields, salt, expected)
+    assert hash_ok(fields, salt, expected.upper())
     assert not hash_ok(fields, salt, 'DEAD')
+
+
+def test_secure_hash_matches_official_jazzcash_sample():
+    """Published sample from JazzCash SandboxDocumentation/features.html."""
+    salt = '0F5DD14AE2'
+    fields = {
+        'pp_MerchantID': 'MER123',
+        'pp_OrderInfo': 'A48cvE28',
+        'pp_Amount': '2995',
+        'pp_SecureHash': 'should-be-ignored',
+        'pp_BankID': '',
+        'csrf_token': 'not-a-pp-field',
+    }
+    official = 'c7689cda7474eb1adcd343fd0c0b676bad0ba66361cc46db589bdb0da4c1c867'
+    assert secure_hash(fields, salt) == official
+    assert secure_hash(fields, ' 0F5DD14AE2\n') == official
+    assert hash_ok(fields, salt, official.upper())
 
 
 def test_amount_and_configured_flags():

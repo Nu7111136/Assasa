@@ -52,22 +52,34 @@ def public_base(config, request) -> str:
 
 
 def secure_hash(fields: dict, salt: str) -> str:
-    """JazzCash HMAC: salt + '&' + sorted nonempty values, key = salt."""
+    """JazzCash HMAC: salt + '&' + nonempty pp_* values sorted by key, key = salt.
+
+    Official sample in SandboxDocumentation/features.html is lowercase hex.
+    Only fields whose names start with 'pp' (any case) are included; empty
+    values and pp_SecureHash are skipped. The salt is stripped so a pasted
+    key with surrounding whitespace still matches.
+    """
+    salt = (salt or '').strip()
     parts = []
     for key in sorted(fields):
-        if key == 'pp_SecureHash':
+        if not str(key).lower().startswith('pp'):
+            continue
+        if str(key).lower() == 'pp_securehash':
             continue
         value = fields[key]
         if value is None or str(value) == '':
             continue
         parts.append(str(value))
     message = salt + ''.join('&' + p for p in parts)
-    return hmac.new(salt.encode('utf-8'), message.encode('utf-8'), hashlib.sha256).hexdigest().upper()
+    return hmac.new(salt.encode('utf-8'), message.encode('utf-8'), hashlib.sha256).hexdigest()
 
 
 def hash_ok(fields: dict, salt: str, given: str) -> bool:
     expected = secure_hash(fields, salt)
-    return hmac.compare_digest(expected, (given or '').strip().upper())
+    got = (given or '').strip()
+    if len(expected) != len(got):
+        return False
+    return hmac.compare_digest(expected.upper(), got.upper())
 
 
 SUCCESS_CODE = '000'
