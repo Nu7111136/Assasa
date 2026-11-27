@@ -1,0 +1,94 @@
+{% extends 'base.html' %}{% block content %}
+<p class="stock-shop">{{ account.name }}</p>
+<h1 class="hero-title">{{ led.full if full else led.title }}</h1>
+
+<section class="led-total{{ ' is-minus' if total < 0 }}" aria-live="polite">
+<span class="led-total-label">{{ led.total }}</span>
+<strong class="led-total-num">{{ led.rs }} <bdi lang="en" dir="ltr">{{ ledger_signed(total) }}</bdi></strong>
+<span class="led-total-help">{{ led.total_help }}</span>
+</section>
+
+{% if not full %}
+<form method="post" action="{{ url_for('ledger_add') }}" class="led-add">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<h2>{{ led.add }}</h2>
+<div class="led-add-grid">
+<label class="led-field">{{ led.date }}
+<input type="date" name="day" value="{{ day.isoformat() }}" max="{{ today.isoformat() }}" min="2000-01-01" required lang="en" dir="ltr">
+</label>
+<label class="led-field">{{ led.amount }}
+<input name="amount" inputmode="numeric" pattern="[0-9,]{1,11}" maxlength="11" required autocomplete="off" placeholder="0" lang="en" dir="ltr">
+</label>
+</div>
+<label class="led-field">{{ led.note }}
+<input name="note" maxlength="80" autocomplete="off" placeholder="{{ led.note_ph }}"{% if lang=='ur' %} lang="ur" dir="rtl" inputmode="none" data-kb="ur"{% else %} lang="en" dir="ltr"{% endif %}>
+</label>
+<div class="led-kind">
+<button type="submit" name="kind" value="plus" class="led-plus">{{ led.plus }}</button>
+<button type="submit" name="kind" value="minus" class="led-minus">{{ led.minus }}</button>
+</div>
+</form>
+
+<form method="get" action="{{ url_for('ledger') }}" class="led-pick">
+<label class="led-field">{{ led.day_title }}
+<input type="date" name="day" value="{{ day.isoformat() }}" max="{{ today.isoformat() }}" min="2000-01-01" lang="en" dir="ltr">
+</label>
+<button type="submit" class="btn-quiet">{{ led.pick_day }}</button>
+{% if day != today %}<a class="led-today" href="{{ url_for('ledger') }}">{{ led.today }}</a>{% endif %}
+</form>
+
+<section class="led-day">
+<h2>{{ led.day_title }} <bdi lang="en" dir="ltr">{{ day_text }}</bdi></h2>
+{% if rows %}
+<table class="led-table">
+<tbody>
+{% for row in rows %}{% include '_ledger_row.html' %}{% endfor %}
+</tbody>
+<tfoot>
+<tr><th>{{ led.day_in }}</th><td class="led-amt is-plus" lang="en" dir="ltr">+{{ ledger_rs(sums.plus) }}</td><td></td></tr>
+<tr><th>{{ led.day_out }}</th><td class="led-amt is-minus" lang="en" dir="ltr">−{{ ledger_rs(sums.minus) }}</td><td></td></tr>
+<tr class="led-net"><th>{{ led.day_net }}</th><td class="led-amt" lang="en" dir="ltr">{{ ledger_signed(sums.net) }}</td><td></td></tr>
+</tfoot>
+</table>
+{% else %}
+<p class="lead">{{ led.none_day if any_entries else led.none }}</p>
+{% endif %}
+</section>
+<a class="button-link" href="{{ url_for('ledger', view='all') }}">{{ led.show }}</a>
+
+{% else %}
+{% if groups %}
+{% for group in groups %}
+<section class="led-group">
+<h2><a href="{{ url_for('ledger', day=group.day.isoformat()) }}"><bdi lang="en" dir="ltr">{{ group.day.strftime('%d %b %Y') }}</bdi></a></h2>
+<table class="led-table">
+<thead><tr><th>{{ led.col_note }}</th><th>{{ led.amount }}</th><th>{{ led.running }}</th></tr></thead>
+<tbody>
+{% for row in group.rows %}{% include '_ledger_row.html' %}{% endfor %}
+</tbody>
+<tfoot><tr class="led-net"><th>{{ led.day_net }}</th><td class="led-amt" lang="en" dir="ltr">{{ ledger_signed(group.net) }}</td><td></td></tr></tfoot>
+</table>
+</section>
+{% endfor %}
+<section class="led-total led-total-end{{ ' is-minus' if total < 0 }}">
+<span class="led-total-label">{{ led.total }}</span>
+<strong class="led-total-num">{{ led.rs }} <bdi lang="en" dir="ltr">{{ ledger_signed(total) }}</bdi></strong>
+</section>
+{% else %}
+<p class="lead">{{ led.none }}</p>
+{% endif %}
+<a class="button-link btn-quiet" href="{{ url_for('ledger') }}">{{ led.back_day }}</a>
+{% endif %}
+
+<form method="post" action="{{ url_for('ledger_whatsapp') }}" class="led-wa">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="scope" value="{{ 'all' if full else 'day' }}">
+{% if not full %}<input type="hidden" name="day" value="{{ day.isoformat() }}">{% endif %}
+<h2>{{ led.wa_title }}</h2>
+<label class="led-field">{{ led.wa_phone }}
+<input name="phone" type="tel" inputmode="numeric" pattern="(03[0-9]{9}|\+?923[0-9]{9})" maxlength="13" required autocomplete="tel" placeholder="03XXXXXXXXX" value="{{ wa_phone }}" lang="en" dir="ltr">
+</label>
+<p class="hint">{{ led.wa_hint }}</p>
+<button type="submit" class="led-wa-btn">{{ led.wa_send_all if full else led.wa_send_day }}</button>
+</form>
+{% endblock %}

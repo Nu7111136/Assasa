@@ -13,4 +13,10 @@
 <span>{{ inv.open_help }}</span>
 {% if stock_low_n %}<span class="stock-cta-low">{{ stock_low_n }} · {{ inv.low }}</span>{% endif %}
 </a>
+<a class="stock-cta led-cta" href="{{ url_for('ledger') }}">
+<span class="stock-cta-kicker">{{ led.kicker }}</span>
+<strong>{{ led.open }}</strong>
+<span>{{ led.open_help }}</span>
+<span class="led-cta-total{{ ' is-minus' if ledger_total < 0 }}">{{ led.total }}: {{ led.rs }} <bdi lang="en" dir="ltr">{{ ledger_signed(ledger_total) }}</bdi></span>
+</a>
 <form action="/logout" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="btn-quiet">{{ t.logout }}</button></form>{% endblock %}

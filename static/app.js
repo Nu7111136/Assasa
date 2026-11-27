@@ -114,6 +114,12 @@ function rakhzaSound(kind) {
       try { sessionStorage.setItem('rakhza-sound', 'add'); } catch (err) {}
     });
   });
+  document.querySelectorAll('form.led-del-form').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      const ask = form.getAttribute('data-ask') || '';
+      if (ask && !window.confirm(ask)) event.preventDefault();
+    });
+  });
   document.querySelectorAll('form.nb-del-form').forEach((form) => {
     form.addEventListener('submit', (event) => {
       const ask = form.getAttribute('data-ask') || '';

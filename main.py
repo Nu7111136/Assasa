@@ -19,6 +19,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from billing import register_billing, utc
 from inventory import register_inventory, TRADES, seed_first_notebook
 from legal import register_legal, PAGES as LEGAL_PAGES
+from ledger import register_ledger
 
 load_dotenv()
 db = SQLAlchemy()
@@ -128,6 +129,17 @@ class StockMove(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False)
 
 
+class LedgerEntry(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False, index=True)
+    day = db.Column(db.Date, nullable=False, index=True)  # the shop's date (PKT), not the server time
+    kind = db.Column(db.String(6), nullable=False)  # plus | minus
+    amount_rs = db.Column(db.Integer, nullable=False)
+    note = db.Column(db.String(80))
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False)
+    active = db.Column(db.Boolean, nullable=False, default=True)
+
+
 class ReconNote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     period_from = db.Column(db.DateTime(timezone=True), nullable=False)
@@ -180,6 +192,7 @@ def create_app(config=None):
             'stock_pick': 'inventory',
             'notebook_new': 'inventory',
             'jazzcash_wait': 'upgrade',
+            'ledger': 'dashboard',
         }.get(request.endpoint)
         return dict(t=g.t, lang=g.lang, back_href=url_for(dest) if dest else '')
 
@@ -226,7 +239,7 @@ def create_app(config=None):
             session['lang'] = lang
         page = request.args.get('page', 'signup')
         allowed = ('signup', 'login', 'forgot_password', 'dashboard', 'upgrade', 'admin_home', 'admin_payments',
-                   'inventory', 'inventory_new', 'inventory_item', 'stock_move', 'stock_pick', 'notebook_new')
+                   'inventory', 'inventory_new', 'inventory_item', 'stock_move', 'stock_pick', 'notebook_new', 'ledger')
         if page == 'jazzcash_wait':
             page = 'upgrade'
         allowed += tuple(LEGAL_PAGES)
@@ -323,6 +336,7 @@ def create_app(config=None):
     register_billing(app, db, User, Payment, now, ReconNote, csrf=csrf)
     register_inventory(app, db, User, Item, StockMove, Notebook, now)
     register_legal(app)
+    register_ledger(app, db, LedgerEntry, now)
     db_uri = app.config.get('SQLALCHEMY_DATABASE_URI') or ''
     db_kind = 'postgres' if 'postgres' in db_uri else 'sqlite'
     log.info('Rakhza started log_level=%s db=%s', app.config['LOG_LEVEL'], db_kind)

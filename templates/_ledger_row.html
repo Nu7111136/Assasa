@@ -1,0 +1,10 @@
+<tr class="led-row is-{{ row.kind }}">
+<td class="led-note"><span class="led-kind-tag">{{ led.plus_short if row.kind=='plus' else led.minus_short }}</span> {{ row.note or '' }}</td>
+<td class="led-amt is-{{ row.kind }}" lang="en" dir="ltr">{{ '+' if row.kind=='plus' else '−' }}{{ ledger_rs(row.amount_rs) }}</td>
+<td class="led-end">{% if full %}<span class="led-run" lang="en" dir="ltr">{{ ledger_signed(row.running) }}</span>{% endif %}
+<form method="post" action="{{ url_for('ledger_remove', eid=row.id) }}" class="led-del-form" data-ask="{{ led.remove_ask }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% if full %}<input type="hidden" name="view" value="all">{% endif %}
+<button type="submit" class="led-del" aria-label="{{ led.remove }}">×</button>
+</form></td>
+</tr>

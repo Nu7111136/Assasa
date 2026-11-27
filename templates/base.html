@@ -1,12 +1,12 @@
 <!doctype html><html lang="{{ lang }}" dir="{{ 'rtl' if lang == 'ur' else 'ltr' }}"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#4A0D1A"><meta name="robots" content="{{ 'index,follow' if legal_pages is defined and request.endpoint in legal_pages else 'noindex,nofollow' }}">
-<title>Rakhza · {{ heading if heading is defined else (t[mode] if mode is defined else t.dashboard) }}</title><link rel="manifest" href="/static/manifest.webmanifest"><link rel="icon" href="/static/icon-192.png"><link rel="apple-touch-icon" href="/static/icon-192.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap"><link rel="stylesheet" href="/static/style.css?v=ui-32"></head>
+<title>Rakhza · {{ heading if heading is defined else (t[mode] if mode is defined else t.dashboard) }}</title><link rel="manifest" href="/static/manifest.webmanifest"><link rel="icon" href="/static/icon-192.png"><link rel="apple-touch-icon" href="/static/icon-192.png"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@500;600;700&display=swap"><link rel="stylesheet" href="/static/style.css?v=ui-33"></head>
 <body><header>
 <div class="header-start">{% if back_href %}<a class="back" id="back-btn" href="{{ back_href }}">{{ t.back }}</a>{% endif %}
 <a class="brand" href="/">Rakhza <span lang="ur">رکھزا</span></a></div>
 <nav aria-label="Language"><a href="{{ url_for('switch_language',lang='en',page=request.endpoint) }}" lang="en">EN</a><a href="{{ url_for('switch_language',lang='ur',page=request.endpoint) }}" lang="ur">اردو</a></nav>
 </header>
-<main class="sheet{% if request.endpoint in ('admin_home','admin_payments') %} admin-sheet{% endif %}{% if request.endpoint in ('inventory','inventory_new','inventory_item','stock_move','stock_pick') %} stock-sheet{% endif %}">{% if account %}{% if test_mode %}<aside class="test-strip">{{ 'TEST: Day' if lang=='en' else 'آزمائش: دن' }} {{tester_day}}</aside>{% endif %}
+<main class="sheet{% if request.endpoint in ('admin_home','admin_payments') %} admin-sheet{% endif %}{% if request.endpoint in ('inventory','inventory_new','inventory_item','stock_move','stock_pick','ledger') %} stock-sheet{% endif %}">{% if account %}{% if test_mode %}<aside class="test-strip">{{ 'TEST: Day' if lang=='en' else 'آزمائش: دن' }} {{tester_day}}</aside>{% endif %}
 <aside class="trial-banner" aria-label="{{ 'Subscription' if lang=='en' else 'رکنیت' }}"><span>
 {% if paid %}{{ 'Paid access active' if lang=='en' else 'ادا شدہ رکنیت فعال ہے' }}
 {% elif not readonly %}{{ trial_days }} {{ ('day left' if trial_days==1 else 'days left') if lang=='en' else 'دن باقی' }}{% endif %}</span>
@@ -18,10 +18,11 @@
 <p class="footer-copy">© 2026 Rakhza · {{ 'Pakistan' if lang=='en' else 'پاکستان' }}</p>
 <p>{{ t.install }}</p></footer>
 {% if lang=='ur' %}<div id="ur-kb" class="ur-kb" hidden dir="ltr" lang="ur" role="group" aria-label="اردو کی بورڈ"></div>{% endif %}
-{% if account and request.endpoint in ('dashboard','inventory','inventory_new','inventory_item','stock_move','stock_pick') %}
+{% if account and request.endpoint in ('dashboard','inventory','inventory_new','inventory_item','stock_move','stock_pick','ledger') %}
 <nav class="app-tabbar" aria-label="{{ inv.tab_stock }}">
 <a href="{{ url_for('dashboard') }}" class="{{ 'is-on' if request.endpoint=='dashboard' }}">{{ inv.home }}</a>
 <a href="{{ url_for('inventory') }}" class="{{ 'is-on' if request.endpoint in ('inventory','inventory_new','inventory_item','stock_move','stock_pick') }}">{{ inv.tab_stock }}</a>
+<a href="{{ url_for('ledger') }}" class="{{ 'is-on' if request.endpoint=='ledger' }}">{{ led.title }}</a>
 </nav>
 {% endif %}
-<script src="/static/app.js?v=ui-32" defer></script></body></html>
+<script src="/static/app.js?v=ui-33" defer></script></body></html>
